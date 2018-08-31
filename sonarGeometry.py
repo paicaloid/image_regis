@@ -4,6 +4,7 @@ import cv2
 def remapping(img):
     # ! need to collect parameter 
     # TODO check best parameter [810,660]
+    
     rows,cols = img.shape
     y,x = np.mgrid[:800*2,:800*2]     #y, x : flip
     r = np.sqrt((x-810)**2+(660*2-y)**2)
