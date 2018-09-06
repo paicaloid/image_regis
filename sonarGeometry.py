@@ -20,4 +20,5 @@ def remapping(img):
 
     M2 = cv2.getRotationMatrix2D((2*cols, rows),-35,0.9)
     dst2 = cv2.warpAffine(out1,M2,(660*2,660*2))
+    dst2 = dst2[0:800,0:1320]
     return dst2
