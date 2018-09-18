@@ -13,17 +13,17 @@ a = np.array([[1,2,4],[4,3,5]])
 
 # print (x,y)
 
-picPath = "D:\Thesis\pic_sonar"
-inx = 1
-picName = "\RTheta_img_" + str(10) + ".jpg"
-img = cv2.imread(picPath + picName, 0)
-mask = cv2.imread("D:\Thesis\pic_sonar\mask\com_mask.png",0)
+# picPath = "D:\Thesis\pic_sonar"
+# inx = 1
+# picName = "\RTheta_img_" + str(10) + ".jpg"
+# img = cv2.imread(picPath + picName, 0)
+# mask = cv2.imread("D:\Thesis\pic_sonar\mask\com_mask.png",0)
 
-blur_0 = cv2.GaussianBlur(mask,(9,9),0,0)
-blur_1 = cv2.GaussianBlur(mask,(9,9),1,1)
-blur_2 = cv2.GaussianBlur(mask,(9,9),2,2)
-blur_3 = cv2.GaussianBlur(mask,(9,9),3,3)
-blur_4 = cv2.GaussianBlur(mask,(9,9),4,4)
+# blur_0 = cv2.GaussianBlur(mask,(9,9),0,0)
+# blur_1 = cv2.GaussianBlur(mask,(9,9),1,1)
+# blur_2 = cv2.GaussianBlur(mask,(9,9),2,2)
+# blur_3 = cv2.GaussianBlur(mask,(9,9),3,3)
+# blur_4 = cv2.GaussianBlur(mask,(9,9),4,4)
 
 # cv2.imshow("0", blur_0)
 # cv2.imshow("1", blur_1)
@@ -31,13 +31,20 @@ blur_4 = cv2.GaussianBlur(mask,(9,9),4,4)
 # cv2.imshow("3", blur_3)
 # cv2.imshow("4", blur_4)
 
-kernel = np.ones((9,9),np.uint8)
-erosion = cv2.erode(blur_4,kernel,iterations = 1)
-img = sonarGeometry.remapping(img)
-gaussian = cv2.getGaussianKernel(240, 40)
-gaussian = gaussian * gaussian.T
+for i in range(1,10):
+    y = int(i/2)
+    x = 0.5 + (0.1*y)
+    z = 1.0 - x
+    print (x, z)
+    # print (x)
 
-dst = cv2.filter2D(erosion, -1, gaussian)
+# kernel = np.ones((9,9),np.uint8)
+# erosion = cv2.erode(blur_4,kernel,iterations = 1)
+# img = sonarGeometry.remapping(img)
+# gaussian = cv2.getGaussianKernel(240, 40)
+# gaussian = gaussian * gaussian.T
+
+# dst = cv2.filter2D(erosion, -1, gaussian)
 
 # im1_fft = np.fft.fft2(img)
 # im1_fft = np.fft.fftshift(im1_fft)
@@ -77,17 +84,17 @@ dst = cv2.filter2D(erosion, -1, gaussian)
 # print (np.amax(img))
 
 # res = np.ones((800,1320),np.uint8)
-res = img * dst
-print (np.amax(res))
+# res = img * dst
+# print (np.amax(res))
 
 
-plot_name = ['img', 'gaussian']
-sonarPlotting.subplot2(img, dst, plot_name)
+# plot_name = ['img', 'gaussian']
+# sonarPlotting.subplot2(img, dst, plot_name)
 
-cv2.imshow("res", res)
+# cv2.imshow("res", res)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
 
 # surface3d.surface3d(10, 20)
