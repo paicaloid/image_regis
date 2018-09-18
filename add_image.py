@@ -6,6 +6,15 @@ import Feature_match
 
 picPath = "D:\Thesis\pic_sonar"
 
+def applyMask(img, mask):
+    ## Change dtype to avoid overflow (unit8 -> int32)
+    img = img.astype(np.int32)
+    mask = mask.astype(np.int32)
+    out = cv2.multiply(img, mask)
+    out = out/255.0
+    out = out.astype(np.uint8)
+    return out
+
 def create_FFT_image(img):
     img = np.fft.fft2(img)
     img = np.fft.fftshift(img)
@@ -70,14 +79,14 @@ if __name__ == '__main__':
     ## Preprocessing image
     img1 = AverageMultiLook(10, 10)
     img2 = AverageMultiLook(30, 10)
-    img3 = cv2.medianBlur(img1, 5)
-    img4 = cv2.medianBlur(img2, 5)
+    # img3 = cv2.medianBlur(img1, 5)
+    # img4 = cv2.medianBlur(img2, 5)
 
     ## Crop image
     # img1 = img1[0:500,0:768]
-    img2 = img2[0:500,0:768]
-    img3 = img3[0:500,0:768]
-    img4 = img4[0:500,0:768]
+    # img2 = img2[0:500,0:768]
+    # img3 = img3[0:500,0:768]
+    # img4 = img4[0:500,0:768]
 
     ## Rotation
     # M = cv2.getRotationMatrix2D((cols/2,rows/2),90,1)
@@ -99,37 +108,43 @@ if __name__ == '__main__':
     mask = cv2.imread("D:\Thesis\pic_sonar\mask\com_mask.png",0)
     kernel = np.ones((11, 11),np.uint8)
     erosion = cv2.erode(mask,kernel,iterations = 4)
-    blur_4 = cv2.GaussianBlur(erosion,(143,143),24,24)
+    # blur_4 = cv2.GaussianBlur(erosion,(143,143),24,24)
 
-    gaussian = cv2.getGaussianKernel(240, 40)
-    gaussian = gaussian * gaussian.T
-    mask_b = cv2.filter2D(erosion, -1, gaussian)
+    gaussian_2 = cv2.getGaussianKernel(6*20, 20)
+    gaussian_2 = gaussian_2 * gaussian_2.T
+    mask_20 = cv2.filter2D(erosion, -1, gaussian_2)
 
-    plot_name = ['mask1', 'mask2']
-    sonarPlotting.subplot2(blur_4, mask_b, plot_name)
+    gaussian_3 = cv2.getGaussianKernel(6*30, 30)
+    gaussian_3 = gaussian_3 * gaussian_3.T
+    mask_30 = cv2.filter2D(erosion, -1, gaussian_3)
 
-    ## Change dtype to avoid overflow (unit8 -> int32)
-    img1 = img1.astype(np.int32)
-    mask_b = mask_b.astype(np.int32)
-    blur_4 = blur_4.astype(np.int32)
-    out = cv2.multiply(img1, mask_b)
-    out = out/255.0
-    out = out.astype(np.uint8)
-    
-    dst = cv2.multiply(img1, blur_4)
-    dst = dst/255.0
-    dst = dst.astype(np.uint8)
+    gaussian_4 = cv2.getGaussianKernel(6*40, 40)
+    gaussian_4 = gaussian_4 * gaussian_4.T
+    mask_40 = cv2.filter2D(erosion, -1, gaussian_4)
 
-    plot_name = ['mask', 'result']
-    sonarPlotting.subplot2(out, dst, plot_name)
+    gaussian_5 = cv2.getGaussianKernel(6*50, 50)
+    gaussian_5 = gaussian_5 * gaussian_5.T
+    mask_50 = cv2.filter2D(erosion, -1, gaussian_5)
 
-    out_fft = create_FFT_image(out)
-    dst_fft = create_FFT_image(dst)
+    plot_name = ['20', '30', '40', '50']
+    sonarPlotting.subplot4(mask_20, mask_30, mask_40, mask_50, plot_name)
 
-    plot_name = ['img_fft', 'mask_fft', '3', '4']
-    sonarPlotting.subplot4(img1_fft, img1_fft, out_fft, dst_fft, plot_name)
+    dst20 = applyMask(img1, mask_20)
+    dst30 = applyMask(img1, mask_30)
+    dst40 = applyMask(img1, mask_40)
+    dst50 = applyMask(img1, mask_50)
 
-    
+    plot_name = ['20', '30', '40', '50']
+    sonarPlotting.subplot4(dst20, dst30, dst40, dst50, plot_name)
+
+    out_20 = create_FFT_image(dst20)
+    out_30 = create_FFT_image(dst30)
+    out_40 = create_FFT_image(dst40)
+    out_50 = create_FFT_image(dst50)
+
+    plot_name = ['20', '30', '40', '50']
+    sonarPlotting.subplot4(out_20, out_30, out_40, out_50, plot_name)
+
     # Feature_match.matching(img1, img2)
     # Feature_match.matching(img3, img4)
 
