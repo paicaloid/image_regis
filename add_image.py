@@ -4,7 +4,7 @@ import sonarGeometry
 import sonarPlotting
 import Feature_match
 
-picPath = "D:\Thesis\pic_sonar"
+picPath = "D:\Pai_work\pic_sonar"
 
 def create_FFT_image(img):
     img = np.fft.fft2(img)
@@ -12,42 +12,14 @@ def create_FFT_image(img):
     mag = 20*np.log(np.abs(img))
     return mag
 
-def findPhaseshift(img_1, img_2):
-    img_1 = img_1[200:600,420:900]
-    img_2 = img_2[200:600,420:900]
-    im1_fft = np.fft.fft2(img_1)
-    im2_fft = np.fft.fft2(img_2)
-    im1_fft = np.fft.fftshift(im1_fft)
-    im2_fft = np.fft.fftshift(im2_fft)
-
-    mag_1 = 20*np.log(np.abs(im1_fft))
-    mag_2 = 20*np.log(np.abs(im2_fft))
-    plotName = ['img1', 'img2', 'g1', 'g2']
-    sonarPlotting.subplot4(mag_1, mag_2, img_1, img_2, plotName)
-
-    A = im1_fft * np.conj(im2_fft)
-    B = np.abs(A)
-    phaseShift = A/B
-    phaseShift = np.fft.fftshift(phaseShift)
-    phaseShift = np.fft.ifft2(phaseShift)
-    phaseShift = np.real(phaseShift)
-    phaseShift = np.abs(phaseShift)
-    positionMax = np.amax(phaseShift)
-    print (positionMax)
-    height, width = phaseShift.shape
-    print (np.unravel_index(np.argmax(phaseShift, axis=None), phaseShift.shape))
 
 def AverageMultiLook(start, stop):
     picName = "\RTheta_img_" + str(start) + ".jpg"
     ref = cv2.imread(picPath + picName, 0)
-    sve = cv2.imread(picPath + picName, 0)
     for i in range(1, stop):
         picName = "\RTheta_img_" + str(start+i) + ".jpg"
-        # print (picName)
         img = cv2.imread(picPath + picName, 0)
         ref = cv2.addWeighted(ref, 0.5, img, 0.5, 0)
-    plot_name = ['ref', 'multiLook']
-    # sonarPlotting.subplot2(sve, ref, plot_name)
     return ref
     
 def multiLook(start, stop):
@@ -56,13 +28,10 @@ def multiLook(start, stop):
     sve = cv2.imread(picPath + picName, 0)
     for i in range(1, stop):
         picName = "\RTheta_img_" + str(start+i) + ".jpg"
-        # print (picName)
         img = cv2.imread(picPath + picName, 0)
         inx = int(i/2)
         weight = 0.5 + (0.1 * inx)
         ref = cv2.addWeighted(ref, weight, img, 1.0 - weight, 0)
-    plot_name = ['ref', 'multiLook']
-    # sonarPlotting.subplot2(sve, ref, plot_name)
     return ref
 
 if __name__ == '__main__':
@@ -96,7 +65,7 @@ if __name__ == '__main__':
     # sonarPlotting.subplot4(img1, img2, img3, img4, plot_name)
 
     ## Mask for reduce edge
-    mask = cv2.imread("D:\Thesis\pic_sonar\mask\com_mask.png",0)
+    mask = cv2.imread(picPath + "\mask\com_mask.png",0)
     kernel = np.ones((11, 11),np.uint8)
     erosion = cv2.erode(mask,kernel,iterations = 4)
     blur_4 = cv2.GaussianBlur(erosion,(143,143),24,24)
@@ -129,7 +98,6 @@ if __name__ == '__main__':
     plot_name = ['img_fft', 'mask_fft', '3', '4']
     sonarPlotting.subplot4(img1_fft, img1_fft, out_fft, dst_fft, plot_name)
 
-    
     # Feature_match.matching(img1, img2)
     # Feature_match.matching(img3, img4)
 
