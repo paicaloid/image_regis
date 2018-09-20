@@ -73,54 +73,86 @@ def shiftPosition(shifting):
 
 if __name__ == '__main__':
 
-    ## Preprocessing image
+    plot_name2 = ['1', '2']
+    plot_name4 = ['1', '2', '3', '4']
+
+    ## Preprocessing image ##
     img1 = AverageMultiLook(10, 10)
     img2 = AverageMultiLook(30, 10)
     # img3 = cv2.medianBlur(img1, 5)
     # img4 = cv2.medianBlur(img2, 5)
 
-    ## Crop image
+    ## Crop image ##
     # img1 = img1[0:500,0:768]
     # img2 = img2[0:500,0:768]
     # img3 = img3[0:500,0:768]
     # img4 = img4[0:500,0:768]
 
-    ## Rotation
+    ## Rotation ##
     # M = cv2.getRotationMatrix2D((cols/2,rows/2),90,1)
     # img1 = cv2.warpAffine(img1,M,(cols,rows))
     # img2 = cv2.warpAffine(img2,M,(cols,rows))
     # img3 = cv2.warpAffine(img3,M,(cols,rows))
     # img4 = cv2.warpAffine(img4,M,(cols,rows))
 
-    ## Remap : RTheta -> XY
+    ## Remap : RTheta -> XY ##
     img1 = sonarGeometry.remapping(img1)
     img2 = sonarGeometry.remapping(img2)
 
-    ## Create mask for reduce edge
+    ## Create mask for reduce edge ##
+    # ! Normal mask [remove outside edge]
     mask = cv2.imread(picPath + "\mask\com_mask.png",0)
     kernel = np.ones((11, 11),np.uint8)
     erosion = cv2.erode(mask,kernel,iterations = 4)
-    gauss_blur = cv2.GaussianBlur(erosion,(143,143),24,24)
+    ksize = 199
+    gauss_blur = cv2.GaussianBlur(erosion,(ksize,ksize),10)
+    
+    # ! Special mask [remove inside edge]
+    # TODO : blur -> remap -> erosion -> blur
+    s_mask = cv2.imread(picPath + "\mask\mask_rr.png",0)
+    ksize = 31
+    gauss_r = cv2.GaussianBlur(s_mask,(ksize,ksize),20)
 
+    # cv2.imshow("eee", gauss_r)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    
+    gauss_remap = sonarGeometry.remapping(gauss_r)
+
+    gauss_eros = cv2.erode(gauss_remap,kernel,iterations = 4)
+
+    ksize = 199
+    gauss_bb = cv2.GaussianBlur(gauss_eros,(ksize,ksize),10)
+
+    A = multiplyImage(img1, gauss_blur)
+    B = multiplyImage(img1, gauss_bb)
+
+    sonarPlotting.subplot4(A, B, gauss_eros, gauss_bb, plot_name4)
+    
+
+    # A = multiplyImage(img1, gauss_blur)
+    # B = multiplyImage(img1, gauss_r)
+
+    # sonarPlotting.subplot4(gauss_blur, gauss_r, A, B, plot_name)
     # gaussian = cv2.getGaussianKernel(240, 40)
     # gaussian = gaussian * gaussian.T
     # mask_b = cv2.filter2D(erosion, -1, gaussian)
+    if(0):
+        ## Reduce edge effect
+        img1_blur = multiplyImage(img1, gauss_blur)
+        img2_blur = multiplyImage(img2, gauss_blur)
 
-    ## Reduce edge effect
-    img1_blur = multiplyImage(img1, gauss_blur)
-    img2_blur = multiplyImage(img2, gauss_blur)
+        plot_name = ['img1', 'img2', 'blur1', 'blur2']
+        sonarPlotting.subplot4(img1, img2, img1_blur, img2_blur, plot_name)
+        is_edge_reduce(img1, img2, img1_blur, img2_blur)
 
-    plot_name = ['img1', 'img2', 'blur1', 'blur2']
-    sonarPlotting.subplot4(img1, img2, img1_blur, img2_blur, plot_name)
-    is_edge_reduce(img1, img2, img1_blur, img2_blur)
-
-    ## Calculate PhaseShift
-    org_phase = findPhaseshift(img1, img2)
-    shiftPosition(org_phase)
-    blur_phase = findPhaseshift(img1_blur, img2_blur)
-    shiftPosition(blur_phase)
-    sonarPlotting.plotPhase(org_phase)
-    sonarPlotting.plotPhase(blur_phase)
+        ## Calculate PhaseShift
+        org_phase = findPhaseshift(img1, img2)
+        shiftPosition(org_phase)
+        blur_phase = findPhaseshift(img1_blur, img2_blur)
+        shiftPosition(blur_phase)
+        sonarPlotting.plotPhase(org_phase)
+        sonarPlotting.plotPhase(blur_phase)
 
 
 
