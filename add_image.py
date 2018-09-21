@@ -59,17 +59,23 @@ def findPhaseshift(img1, img2):
     A = fft_1 * np.conj(fft_2)
     B = np.abs(A)
     phaseShift = A/B
-    out = np.fft.fftshift(phaseShift)
-    out = np.fft.ifft2(out)
-    out = np.real(out)
-    out = np.abs(out)
-    return out
+    # phaseShift = np.fft.fftshift(phaseShift)
+    phaseShift = np.fft.ifft2(phaseShift)
+    phaseShift = np.real(phaseShift)
+    phaseShift = np.abs(phaseShift)
+    return phaseShift
 
 def shiftPosition(shifting):
     positionMax = np.amax(shifting)
     print (positionMax)
     height, width = shifting.shape
     print (np.unravel_index(np.argmax(shifting, axis=None), shifting.shape))
+    # for i in range(0,height):
+    #     for j in range(0,width):
+    #         print (shifting[i][j])
+    #         if shifting[i][j] == positionMax:
+    #             print (shifting[i][j])
+    #             print (i,j)
 
 if __name__ == '__main__':
 
@@ -160,6 +166,7 @@ if __name__ == '__main__':
 
     dst = findPhaseshift(img1_blur, img2_blur)
     shiftPosition(dst)
+    sonarPlotting.plotPhase(dst)
 
     # cv2.imshow("eee", img_blur)
     # cv2.waitKey(0)
