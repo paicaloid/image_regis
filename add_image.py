@@ -59,7 +59,7 @@ def findPhaseshift(img1, img2):
     A = fft_1 * np.conj(fft_2)
     B = np.abs(A)
     phaseShift = A/B
-    # phaseShift = np.fft.fftshift(phaseShift)
+    phaseShift = np.fft.fftshift(phaseShift)
     phaseShift = np.fft.ifft2(phaseShift)
     phaseShift = np.real(phaseShift)
     phaseShift = np.abs(phaseShift)
