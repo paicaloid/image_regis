@@ -9,6 +9,12 @@ inv_mask = cv2.imread(picPath + "\mask\inv_rr.png",0)
 plot_name2 = ['1', '2']
 plot_name4 = ['1', '2', '3', '4']
 
+def create_FFT_image(img):
+    img = np.fft.fft2(img)
+    img = np.fft.fftshift(img)
+    mag = 20*np.log(np.abs(img))
+    return mag
+
 def findPhaseshift(img1, img2):
     fft_1 = np.fft.fft2(img1)
     fft_1 = np.fft.fftshift(fft_1)
@@ -54,6 +60,11 @@ if __name__ == '__main__':
         cv2.imshow("R", img_R)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+        mag1 = create_FFT_image(img_L)
+        mag2 = create_FFT_image(img_R)
+
+        sonarPlotting.subplot2(mag1, mag2, plot_name2)
 
         dst = findPhaseshift(img_L, img_R)
         shiftPosition(dst)

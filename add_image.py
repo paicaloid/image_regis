@@ -84,27 +84,30 @@ if __name__ == '__main__':
 
     ## Preprocessing image ##
     img1 = AverageMultiLook(10, 10)
-    img2 = AverageMultiLook(30, 10)
-    # img3 = cv2.medianBlur(img1, 5)
-    # img4 = cv2.medianBlur(img2, 5)
+    img2 = AverageMultiLook(40, 10)
+    img11 = sonarGeometry.remapping(img1)
+    img22 = sonarGeometry.remapping(img2)
+    Feature_match.matching(img11, img22)
+    img3 = cv2.medianBlur(img1, 5)
+    img4 = cv2.medianBlur(img2, 5)
 
     if False:
         ## Crop image ##
-        img1 = img1[0:500,0:768]
-        img2 = img2[0:500,0:768]
-        img3 = img3[0:500,0:768]
-        img4 = img4[0:500,0:768]
+        # img1 = img1[0:500,0:768]
+        # img2 = img2[0:500,0:768]
+        # img3 = img3[0:500,0:768]
+        # img4 = img4[0:500,0:768]
 
         ## Rotation ##
         M = cv2.getRotationMatrix2D((cols/2,rows/2),90,1)
-        img1 = cv2.warpAffine(img1,M,(cols,rows))
-        img2 = cv2.warpAffine(img2,M,(cols,rows))
-        img3 = cv2.warpAffine(img3,M,(cols,rows))
-        img4 = cv2.warpAffine(img4,M,(cols,rows))
+        # img1 = cv2.warpAffine(img1,M,(cols,rows))
+        # img2 = cv2.warpAffine(img2,M,(cols,rows))
+        # img3 = cv2.warpAffine(img3,M,(cols,rows))
+        # img4 = cv2.warpAffine(img4,M,(cols,rows))
 
         ## Remap : RTheta -> XY ##
-        img1 = sonarGeometry.remapping(img1)
-        img2 = sonarGeometry.remapping(img2)
+        # img1 = sonarGeometry.remapping(img1)
+        # img2 = sonarGeometry.remapping(img2)
 
     ## Create mask for reduce edge ##
     # ! Normal mask [remove outside edge]
@@ -114,6 +117,32 @@ if __name__ == '__main__':
     ksize = 199
     gauss_blur = cv2.GaussianBlur(erosion,(ksize,ksize),10)
     
+    # TODO 0: 
+    # fft1 = create_FFT_image(img1)
+    # fft2 = create_FFT_image(img2)
+
+    # # sonarPlotting.subplot4(img1, img2, fft1, fft2, plot_name4)
+
+    # mask_rr = cv2.imread(picPath + "\mask\mask_rr.png",0)
+    # # kernel = np.ones((11, 11),np.uint8)
+    # # erosion = cv2.erode(mask_rr,kernel,iterations = 1)
+    # ksize = 199
+    # gauss_rr = cv2.GaussianBlur(mask_rr,(ksize,ksize),20)
+
+    # cv2.imshow("mask", gauss_rr)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    # img1_b = multiplyImage(img1, gauss_rr)
+    # img2_b = multiplyImage(img2, gauss_rr)
+    # fft1_b = create_FFT_image(img1_b)
+    # fft2_b = create_FFT_image(img2_b)
+
+    # sonarPlotting.subplot4(img1_b, img2_b, fft1_b, fft2_b, plot_name4)
+
+    # dst = findPhaseshift(img1, img2_b)
+    # shiftPosition(dst)
+
     # ! Special mask [remove inside edge]
     # TODO 1: blur -> remap -> erosion -> blur [not work]
     if False:
@@ -150,23 +179,28 @@ if __name__ == '__main__':
         sonarPlotting.subplot2(closing, dilat, plot_name2)
 
     # TODO 3: cv2.inpaint -> remap -> eros -> blur
-    inv_mask = cv2.imread(picPath + "\mask\inv_rr.png",0)
-    img1_paint = cv2.inpaint(img1,inv_mask,3,cv2.INPAINT_TELEA)
-    img1_remap = sonarGeometry.remapping(img1_paint)
-    img1_blur = multiplyImage(img1_remap, gauss_blur)
+    if True:
+        inv_mask = cv2.imread(picPath + "\mask\inv_rr.png",0)
+        img1_paint = cv2.inpaint(img1,inv_mask,3,cv2.INPAINT_TELEA)
+        img1_remap = sonarGeometry.remapping(img1_paint)
+        img1_blur = multiplyImage(img1_remap, gauss_blur)
 
-    img2_paint = cv2.inpaint(img2,inv_mask,3,cv2.INPAINT_TELEA)
-    img2_remap = sonarGeometry.remapping(img2_paint)
-    img2_blur = multiplyImage(img2_remap, gauss_blur)
+        img2_paint = cv2.inpaint(img2,inv_mask,3,cv2.INPAINT_TELEA)
+        img2_remap = sonarGeometry.remapping(img2_paint)
+        img2_blur = multiplyImage(img2_remap, gauss_blur)
 
-    img1_fft = create_FFT_image(img1_blur)
-    img2_fft = create_FFT_image(img2_blur)
+        img1_fft = create_FFT_image(img1_remap)
+        img1_bfft = create_FFT_image(img1_blur)
+        img2_fft = create_FFT_image(img2_blur)
 
-    sonarPlotting.subplot4(img1_blur, img2_blur, img1_fft, img2_fft, plot_name4)
+        sonarPlotting.subplot2(img1, img1_paint, plot_name2)
+        sonarPlotting.subplot4(img1_remap, img1_blur, img1_fft, img1_bfft, plot_name4)
 
-    dst = findPhaseshift(img1_blur, img2_blur)
-    shiftPosition(dst)
-    sonarPlotting.plotPhase(dst)
+        dst = findPhaseshift(img1_blur, img2_blur)
+        shiftPosition(dst)
+
+        Feature_match.matching(img1_blur, img2_blur)
+    # sonarPlotting.plotPhase(dst)
 
     # cv2.imshow("eee", img_blur)
     # cv2.waitKey(0)
