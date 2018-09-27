@@ -56,7 +56,7 @@ def findShiftPosition(shifting):
     # print (positionMax)
     height, width = shifting.shape
     shift = np.unravel_index(np.argmax(shifting, axis=None), shifting.shape)
-    print (np.unravel_index(np.argmax(shifting, axis=None), shifting.shape))
+    # print (np.unravel_index(np.argmax(shifting, axis=None), shifting.shape))
     return shift
 
 if __name__ == '__main__':
@@ -72,7 +72,28 @@ if __name__ == '__main__':
     ImageList_A = Create_BlockImage(imgCrop_A)
     ImageList_B = Create_BlockImage(imgCrop_B)
 
-    sonarPlotting.subplot2(imgCrop_A, imgCrop_B, plot_name2)
+    # sonarPlotting.subplot2(imgCrop_A, imgCrop_B, plot_name2)
+
+    meanList = []
+    varList = []
+
+    for i in range(0,30):
+        print (i, np.mean(ImageList_B[i]), np.var(ImageList_B[i]))
+        cv2.imshow("imgg", ImageList_B[i])
+        cv2.waitKey(0)
+        meanList.append(np.mean(ImageList_B[i]))
+        varList.append(np.var(ImageList_B[i]))
+    cv2.destroyAllWindows()
+    
+    print ("+++++++++++++++++++++++++++++++++++++")
+    # print (np.var(ImageList_A[16]))
+    print (np.mean(meanList), np.mean(varList))
+
+    # for i in range(0,30):
+    #     if np.var(ImageList_A[i]) > np.mean(varList) :
+    #         print (i)
+
+    print ("+++++++++++++++++++++++++++++++++++++")
 
     rowList = []
     colList = []
