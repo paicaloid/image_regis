@@ -3,6 +3,7 @@ import numpy as np
 import sonarGeometry
 import sonarPlotting
 import Feature_match
+import matplotlib.pyplot as plt
 
 picPath = "D:\Pai_work\pic_sonar"
 
@@ -70,12 +71,6 @@ def shiftPosition(shifting):
     print (positionMax)
     height, width = shifting.shape
     print (np.unravel_index(np.argmax(shifting, axis=None), shifting.shape))
-    # for i in range(0,height):
-    #     for j in range(0,width):
-    #         print (shifting[i][j])
-    #         if shifting[i][j] == positionMax:
-    #             print (shifting[i][j])
-    #             print (i,j)
 
 if __name__ == '__main__':
 
@@ -85,11 +80,24 @@ if __name__ == '__main__':
     ## Preprocessing image ##
     img1 = AverageMultiLook(10, 10)
     img2 = AverageMultiLook(40, 10)
-    img11 = sonarGeometry.remapping(img1)
-    img22 = sonarGeometry.remapping(img2)
-    Feature_match.matching(img11, img22)
-    img3 = cv2.medianBlur(img1, 5)
-    img4 = cv2.medianBlur(img2, 5)
+    img11 = cv2.medianBlur(img1, 5)
+    img111 = cv2.medianBlur(img1, 11)
+    img1111 = cv2.medianBlur(img1, 17)
+    # sonarPlotting.subplot4(img1, img11, img111, img1111, plot_name4)
+    img3 = cv2.medianBlur(img1, 11)
+    img4 = cv2.medianBlur(img2, 11)
+
+    # plt.subplot(121),plt.imshow(img1, cmap = 'gray')
+    # plt.title("1"), plt.xticks([]), plt.yticks([])
+    # plt.subplot(122),plt.imshow(img2, cmap = 'gray')
+    # plt.title("1"), plt.xticks([]), plt.yticks([])
+
+    # plt.subplot(121),plt.imshow(img3, cmap = 'gray')
+    # plt.title("2"), plt.xticks([]), plt.yticks([])
+    # plt.subplot(122),plt.imshow(img4, cmap = 'gray')
+    # plt.title("2"), plt.xticks([]), plt.yticks([])
+
+    # plt.show()
 
     if False:
         ## Crop image ##
@@ -179,7 +187,7 @@ if __name__ == '__main__':
         sonarPlotting.subplot2(closing, dilat, plot_name2)
 
     # TODO 3: cv2.inpaint -> remap -> eros -> blur
-    if True:
+    if False:
         inv_mask = cv2.imread(picPath + "\mask\inv_rr.png",0)
         img1_paint = cv2.inpaint(img1,inv_mask,3,cv2.INPAINT_TELEA)
         img1_remap = sonarGeometry.remapping(img1_paint)
