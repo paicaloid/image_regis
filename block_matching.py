@@ -14,27 +14,28 @@ class BlockImage:
         self.blockImg = []
         self.meanList = []
         self.varList = []
-    
+        self.averageMean = 0
+        self.averageVar = 0
+
     def Creat_Block(self, img):
         for i in range(0,5):
             for j in range(0,6):
                 block_img = img[i*100:(i+1)*100, j*128:(j+1)*128]
                 self.blockImg.append(block_img)
+    
+    def Calculate_Mean_Var(self):
+        for i in range(0,30):
+            # print (np.mean(self.blockImg[i]))
+            self.meanList.append(np.mean(self.blockImg[i]))
+            self.varList.append(np.var(self.blockImg[i]))
+        self.averageMean = np.mean(self.meanList)
+        self.averageVar = np.mean(self.varList)
 
     def Show_rowBlock(self, rowIndex):
         index = rowIndex * 6
-        plt.subplot(161),plt.imshow(self.blockImg[index + 0], cmap = 'gray')
-        plt.title("Block #" + str(index + 0)), plt.xticks([]), plt.yticks([])
-        plt.subplot(162),plt.imshow(self.blockImg[index + 1], cmap = 'gray')
-        plt.title("Block #" + str(index + 1)), plt.xticks([]), plt.yticks([])
-        plt.subplot(163),plt.imshow(self.blockImg[index + 2], cmap = 'gray')
-        plt.title("Block #" + str(index + 2)), plt.xticks([]), plt.yticks([])
-        plt.subplot(164),plt.imshow(self.blockImg[index + 3], cmap = 'gray')
-        plt.title("Block #" + str(index + 3)), plt.xticks([]), plt.yticks([])
-        plt.subplot(165),plt.imshow(self.blockImg[index + 4], cmap = 'gray')
-        plt.title("Block #" + str(index + 4)), plt.xticks([]), plt.yticks([])
-        plt.subplot(166),plt.imshow(self.blockImg[index + 5], cmap = 'gray')
-        plt.title("Block #" + str(index + 5)), plt.xticks([]), plt.yticks([])
+        for i in range(0,6):
+            plt.subplot(1,6,i),plt.imshow(self.blockImg[index + i], cmap = 'gray')
+            plt.title("Block #" + str(index + i)), plt.xticks([]), plt.yticks([])
         plt.show()
     
     def Show_allBlock(self):
@@ -42,6 +43,22 @@ class BlockImage:
             plt.subplot(5,6,i+1),plt.imshow(self.blockImg[i], cmap = 'gray')
             plt.title("Block #" + str(i)), plt.xticks([]), plt.yticks([])
         plt.show()
+
+    def CheckAverageBlock(self):
+        passMean = []
+        passVar = []
+        for i in range(0,30):
+            if self.meanList[i] > self.averageMean:
+                passMean.append(i)
+            if self.varList[i] > self.averageVar:
+                passVar.append(i)
+        print (passMean)
+        print (passVar)
+        return passMean, passVar
+
+    def Save_passBlock(self, passList):
+        for i in range(0, len(passList)):
+            cv2.imwrite(picPath + "\Result\BlockImg_" + str(passList[i]) + ".png", self.blockImg[passList[i]])
 
 def multiplyImage(img1, img2):
     # ! Change dtype to avoid overflow (unit8 -> int32)
@@ -98,19 +115,26 @@ if __name__ == '__main__':
 
     #### Import image and Preprocessing ####
     ## image size [660 x 768]
-    img_A = AverageMultiLook(10, 10)
+    img_A = AverageMultiLook(70, 10)
     imgCrop_A = img_A[0:500, 0:768]
-
-    img_B = AverageMultiLook(20, 10)
-    imgCrop_B = img_B[0:500, 0:768]
 
     blockA = BlockImage()
     blockA.Creat_Block(imgCrop_A)
-
-    cv2.imshow("img", imgCrop_A)
-    blockA.Show_allBlock()
-    cv2.destroyAllWindows()
-
+    blockA.Calculate_Mean_Var()
+    passMean, passVar = blockA.CheckAverageBlock()
+    blockA.Save_passBlock(passVar)
+    # blockA.Show_allBlock()
+    print (blockA.averageMean, blockA.averageVar)
+    ### Save Multilook image ###
+    if False:
+        for i in range(1,8):
+            img = AverageMultiLook(i*10, 10)
+            img = img[0:500, 0:768]
+            cv2.imshow("img", img)
+            cv2.waitKey(0)
+            cv2.imwrite(picPath + "\Result\multilook" + str(i*10) + ".png", img)
+        cv2.destroyAllWindows()
+    ### Test Average PhaseShift of blockImage
     if False:
         ImageList_A = Create_BlockImage(imgCrop_A)
         ImageList_B = Create_BlockImage(imgCrop_B)
