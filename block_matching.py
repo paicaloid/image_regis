@@ -9,57 +9,6 @@ picPath = "D:\Pai_work\pic_sonar"
 plot_name2 = ['1', '2']
 plot_name4 = ['1', '2', '3', '4']
 
-class BlockImage:
-    def __init__(self):
-        self.blockImg = []
-        self.meanList = []
-        self.varList = []
-        self.averageMean = 0
-        self.averageVar = 0
-
-    def Creat_Block(self, img):
-        for i in range(0,5):
-            for j in range(0,6):
-                block_img = img[i*100:(i+1)*100, j*128:(j+1)*128]
-                self.blockImg.append(block_img)
-    
-    def Calculate_Mean_Var(self):
-        for i in range(0,30):
-            # print (np.mean(self.blockImg[i]))
-            self.meanList.append(np.mean(self.blockImg[i]))
-            self.varList.append(np.var(self.blockImg[i]))
-        self.averageMean = np.mean(self.meanList)
-        self.averageVar = np.mean(self.varList)
-
-    def Show_rowBlock(self, rowIndex):
-        index = rowIndex * 6
-        for i in range(0,6):
-            plt.subplot(1,6,i),plt.imshow(self.blockImg[index + i], cmap = 'gray')
-            plt.title("Block #" + str(index + i)), plt.xticks([]), plt.yticks([])
-        plt.show()
-    
-    def Show_allBlock(self):
-        for i in range(0,30):
-            plt.subplot(5,6,i+1),plt.imshow(self.blockImg[i], cmap = 'gray')
-            plt.title("Block #" + str(i)), plt.xticks([]), plt.yticks([])
-        plt.show()
-
-    def CheckAverageBlock(self):
-        passMean = []
-        passVar = []
-        for i in range(0,30):
-            if self.meanList[i] > self.averageMean:
-                passMean.append(i)
-            if self.varList[i] > self.averageVar:
-                passVar.append(i)
-        print (passMean)
-        print (passVar)
-        return passMean, passVar
-
-    def Save_passBlock(self, passList):
-        for i in range(0, len(passList)):
-            cv2.imwrite(picPath + "\Result\BlockImg_" + str(passList[i]) + ".png", self.blockImg[passList[i]])
-
 def multiplyImage(img1, img2):
     # ! Change dtype to avoid overflow (unit8 -> int32)
     img1 = img1.astype(np.int32)
@@ -111,20 +60,104 @@ def findShiftPosition(shifting):
     # print (np.unravel_index(np.argmax(shifting, axis=None), shifting.shape))
     return shift
 
+class BlockImage:
+    def __init__(self):
+        self.blockImg = []
+        self.meanList = []
+        self.varList = []
+        self.averageMean = 0
+        self.averageVar = 0
+
+    def Creat_Block(self, img):
+        for i in range(0,5):
+            for j in range(0,6):
+                block_img = img[i*100:(i+1)*100, j*128:(j+1)*128]
+                self.blockImg.append(block_img)
+
+    def Adjsut_block(self, shiftValue):
+        for i in range(0,30):
+            if np.mod(i,6) < 3:
+                self.blockImg[i] = self.blockImg[i][0:100, 0 + shiftValue:128]
+            else:
+                self.blockImg[i] = self.blockImg[i][0:100, 0:128 - shiftValue]
+    
+    def Calculate_Mean_Var(self):
+        for i in range(0,30):
+            # print (np.mean(self.blockImg[i]))
+            self.meanList.append(np.mean(self.blockImg[i]))
+            self.varList.append(np.var(self.blockImg[i]))
+        self.averageMean = np.mean(self.meanList)
+        self.averageVar = np.mean(self.varList)
+
+    def Show_rowBlock(self, rowIndex):
+        index = rowIndex * 6
+        for i in range(0,6):
+            plt.subplot(1,6,i),plt.imshow(self.blockImg[index + i], cmap = 'gray')
+            plt.title("Block #" + str(index + i)), plt.xticks([]), plt.yticks([])
+        plt.show()
+    
+    def Show_allBlock(self):
+        for i in range(0,30):
+            plt.subplot(5,6,i+1),plt.imshow(self.blockImg[i], cmap = 'gray')
+            plt.title("Block #" + str(i)), plt.xticks([]), plt.yticks([])
+        plt.show()
+
+    def CheckAverageBlock(self):
+        passMean = []
+        passVar = []
+        for i in range(0,30):
+            if self.meanList[i] > self.averageMean:
+                passMean.append(i)
+            if self.varList[i] > self.averageVar:
+                passVar.append(i)
+        print (passMean)
+        print (passVar)
+        return passMean, passVar
+
+    def Save_passBlock(self, passList):
+        for i in range(0, len(passList)):
+            cv2.imwrite(picPath + "\Result\BlockImg_" + str(passList[i]) + ".png", self.blockImg[passList[i]])
+
 if __name__ == '__main__':
 
     #### Import image and Preprocessing ####
     ## image size [660 x 768]
-    img_A = AverageMultiLook(70, 10)
+    img_A = AverageMultiLook(10, 5)
     imgCrop_A = img_A[0:500, 0:768]
+    img_B = AverageMultiLook(15, 5)
+    imgCrop_B = img_B[0:500, 0:768]
+    # img_C = AverageMultiLook(20, 5)
+    # imgCrop_C = img_C[0:500, 0:768]
+    # img_D = AverageMultiLook(25, 5)
+    # imgCrop_D = img_D[0:500, 0:768]
+
+    # sonarPlotting.subplot2(imgCrop_A, imgCrop_B, plot_name2)
 
     blockA = BlockImage()
     blockA.Creat_Block(imgCrop_A)
-    blockA.Calculate_Mean_Var()
-    passMean, passVar = blockA.CheckAverageBlock()
-    blockA.Save_passBlock(passVar)
     # blockA.Show_allBlock()
-    print (blockA.averageMean, blockA.averageVar)
+
+    blockA.Adjsut_block(14)
+    # blockA.Show_allBlock()
+
+    blockB = BlockImage()
+    blockB.Creat_Block(imgCrop_B)
+    # blockB.Show_allBlock()
+
+    blockB.Adjsut_block(14)
+    # blockB.Show_allBlock()
+
+    # blockC =BlockImage()
+    # blockC.Creat_Block(imgCrop_C)
+
+    # blockD = BlockImage()
+    # blockD.Creat_Block(imgCrop_D)
+
+    # num = 27
+    # plot_name = ["Img10 block#" + str(num), "Img20 block#" + str(num), "Img30 block#" + str(num), "Img40 block#" + str(num)]
+    # sonarPlotting.subplot4(blockA.blockImg[num], blockB.blockImg[num], blockC.blockImg[num],blockD.blockImg[num], plot_name)
+
+    # print (blockA.averageMean, blockA.averageVar)
     ### Save Multilook image ###
     if False:
         for i in range(1,8):
@@ -135,45 +168,39 @@ if __name__ == '__main__':
             cv2.imwrite(picPath + "\Result\multilook" + str(i*10) + ".png", img)
         cv2.destroyAllWindows()
     ### Test Average PhaseShift of blockImage
-    if False:
-        ImageList_A = Create_BlockImage(imgCrop_A)
-        ImageList_B = Create_BlockImage(imgCrop_B)
-
-        # sonarPlotting.subplot2(imgCrop_A, imgCrop_B, plot_name2)
-
-        meanList = []
-        varList = []
-
+    if True:
+        shiftRow = []
+        shiftRow_adjust = []
+        shiftCol = []
+        shiftCol_adjust = []
         for i in range(0,30):
-            print (i, np.mean(ImageList_B[i]), np.var(ImageList_B[i]))
-            cv2.imshow("imgg", ImageList_B[i])
-            cv2.waitKey(0)
-            meanList.append(np.mean(ImageList_B[i]))
-            varList.append(np.var(ImageList_B[i]))
-        cv2.destroyAllWindows()
-
-        print (np.mean(meanList), np.mean(varList))
-
-        rowList = []
-        colList = []
-
+            phase = findPhaseshift(blockB.blockImg[i], blockA.blockImg[i])
+            x_shift, y_shift = findShiftPosition(phase)
+            # print (position)
+            shiftRow.append(x_shift)
+            shiftRow_adjust.append(x_shift)
+            shiftCol.append(y_shift)
+            shiftCol_adjust.append(y_shift)
+        # print (shiftRow, shiftCol)
         for i in range(0,30):
-            phase = findPhaseshift(ImageList_B[i], ImageList_A[i])
-            position = findShiftPosition(phase)
-            rowList.append(position[0])
-            colList.append(position[1])
+            if shiftRow_adjust[i] > 50:
+                shiftRow_adjust[i] = 50 - shiftRow_adjust[i]
+            if shiftCol_adjust[i] > 64:
+                shiftCol_adjust[i] = 64 - shiftCol_adjust[i]
+            # print (shiftRow[i]+","+shiftCol[i] + "-->" + shiftRow_adjust[i]+","+shiftCol_adjust[i] )
+        # print (shiftRow, shiftCol)
+        print (shiftRow_adjust)
+        print (shiftCol_adjust)
         
-        rowShift = int(np.round(np.mean(rowList)))
-        colShift = int(np.round(np.mean(colList)))
-        print (rowShift, colShift)
+        
+        # for i in range(0,30):
+        #     M = np.float32([[1,0,shiftCol_adjust[i]],[0,1,shiftRow_adjust[i]]])
+        #     res = cv2.warpAffine(blockA.blockImg[i], M, (128,100))
+        #     dst = cv2.addWeighted(blockB.blockImg[i], 0.5, res, 0.5, 0)
+        #     out = multiplyImage(blockB.blockImg[i], res)
+        #     sonarPlotting.subplot4(blockB.blockImg[i], res, dst, out, plot_name4)
 
-        tranform_Matrix = np.float32([[1,0,colShift],[0,1,rowShift]])
-        result = cv2.warpAffine(imgCrop_A, tranform_Matrix, (768,500))
-
-        dst = cv2.addWeighted(imgCrop_B, 0.5, result, 0.5, 0)
-        out = multiplyImage(imgCrop_B, result)
-
-        cv2.imshow("imgB", dst)
-        cv2.imshow("mul", out)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    ### Plot dots ###
+    if False:
+        plt.plot(shiftRow_adjust, shiftCol_adjust, 'o', label='Original data', markersize=1)
+        plt.show()

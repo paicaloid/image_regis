@@ -56,15 +56,15 @@ if __name__ == '__main__':
         img_L = cv2.imread("D:\Pai_work\panorama-stitching\images\Bryce_left_02.png",0)
         img_R = cv2.imread("D:\Pai_work\panorama-stitching\images\Bryce_right_02.png",0)
 
-        cv2.imshow("L", img_L)
-        cv2.imshow("R", img_R)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow("L", img_L)
+        # cv2.imshow("R", img_R)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
         mag1 = create_FFT_image(img_L)
         mag2 = create_FFT_image(img_R)
 
-        sonarPlotting.subplot2(mag1, mag2, plot_name2)
+        # sonarPlotting.subplot2(mag1, mag2, plot_name2)
 
         dst = findPhaseshift(img_L, img_R)
         shiftPosition(dst)
@@ -72,17 +72,17 @@ if __name__ == '__main__':
 
         rows,cols = img_R.shape
 
-        M = np.float32([[1,0,629],[0,1,14]])
+        M = np.float32([[1,0,0],[0,1, -14]])
         out = cv2.warpAffine(img_R,M,(cols,rows))
 
         cv2.imshow("out", out)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-        ref = cv2.addWeighted(img_L, 0.5, out, 0.5, 0)
+        # ref = cv2.addWeighted(img_L, 0.5, out, 0.5, 0)
 
-        cv2.imshow("ref", ref)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow("ref", ref)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
-        sonarPlotting.subplot4(img_L, img_R, out, ref, plot_name4)
+        # sonarPlotting.subplot4(img_L, img_R, out, ref, plot_name4)
