@@ -4,6 +4,7 @@ import sonarGeometry
 import sonarPlotting
 import Feature_match
 import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
 
 picPath = "D:\Pai_work\pic_sonar"
 plot_name2 = ['1', '2']
@@ -137,14 +138,14 @@ if __name__ == '__main__':
     blockA.Creat_Block(imgCrop_A)
     # blockA.Show_allBlock()
 
-    blockA.Adjsut_block(14)
+    # blockA.Adjsut_block(14)
     # blockA.Show_allBlock()
 
     blockB = BlockImage()
     blockB.Creat_Block(imgCrop_B)
     # blockB.Show_allBlock()
 
-    blockB.Adjsut_block(14)
+    # blockB.Adjsut_block(14)
     # blockB.Show_allBlock()
 
     # blockC =BlockImage()
@@ -168,7 +169,7 @@ if __name__ == '__main__':
             cv2.imwrite(picPath + "\Result\multilook" + str(i*10) + ".png", img)
         cv2.destroyAllWindows()
     ### Test Average PhaseShift of blockImage
-    if True:
+    if False:
         shiftRow = []
         shiftRow_adjust = []
         shiftCol = []
@@ -191,14 +192,23 @@ if __name__ == '__main__':
         # print (shiftRow, shiftCol)
         print (shiftRow_adjust)
         print (shiftCol_adjust)
-        
-        
-        # for i in range(0,30):
-        #     M = np.float32([[1,0,shiftCol_adjust[i]],[0,1,shiftRow_adjust[i]]])
-        #     res = cv2.warpAffine(blockA.blockImg[i], M, (128,100))
-        #     dst = cv2.addWeighted(blockB.blockImg[i], 0.5, res, 0.5, 0)
-        #     out = multiplyImage(blockB.blockImg[i], res)
-        #     sonarPlotting.subplot4(blockB.blockImg[i], res, dst, out, plot_name4)
+           
+        for i in range(0,30):
+            M = np.float32([[1,0,shiftCol_adjust[i]],[0,1,shiftRow_adjust[i]]])
+            res = cv2.warpAffine(blockA.blockImg[i], M, (114,100))
+            dst = cv2.addWeighted(blockB.blockImg[i], 0.5, res, 0.5, 0)
+            out = multiplyImage(blockB.blockImg[i], res)
+            plot_name = ["Img15_Block" + str(i), "ShiftRow : " + str(shiftRow_adjust[i]) + ", ShiftCol : " + str(shiftCol_adjust[i]), "addWeighted", "multiply"]
+            # sonarPlotting.subplot4(blockB.blockImg[i], res, dst, out, plot_name)
+            sonarPlotting.saveplot4(blockB.blockImg[i], res, dst, out, plot_name, "subplot" + str(i) + ".png")
+
+    ### BlockImage Feature Match ###
+    if True:
+        # Feature_match.matching(blockA.blockImg[16], blockB.blockImg[16])
+        for i in range(0,30):
+            # Feature_match.matching(blockA.blockImg[i], blockB.blockImg[i])
+            saveName = "Img10_SIFT_Img15_#" + str(i) + ".png"
+            Feature_match.saveMatching(blockA.blockImg[i], blockB.blockImg[i], saveName)
 
     ### Plot dots ###
     if False:
