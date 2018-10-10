@@ -18,6 +18,17 @@ def subplot4(im1, im2, im3, im4, title):
     plt.title(title[3]), plt.xticks([]), plt.yticks([])
     plt.show()
 
+def saveplot4(im1, im2, im3, im4, title, filename):
+    plt.subplot(221),plt.imshow(im1, cmap = 'gray')
+    plt.title(title[0]), plt.xticks([]), plt.yticks([])
+    plt.subplot(222),plt.imshow(im2, cmap = 'gray')
+    plt.title(title[1]), plt.xticks([]), plt.yticks([])
+    plt.subplot(223),plt.imshow(im3, cmap = 'gray')
+    plt.title(title[2]), plt.xticks([]), plt.yticks([])
+    plt.subplot(224),plt.imshow(im4, cmap = 'gray')
+    plt.title(title[3]), plt.xticks([]), plt.yticks([])
+    plt.savefig(filename)
+
 ## subplot 2 slot [1x2] 
 def subplot2(im1, im2, title):
     plt.subplot(121),plt.imshow(im1, cmap = 'gray')
