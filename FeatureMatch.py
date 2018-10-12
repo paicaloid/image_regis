@@ -2,7 +2,60 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-def matching(img1, img2):
+def BF_matching(img1, img2):
+    # Initiate SIFT detector
+    sift = cv2.xfeatures2d.SIFT_create()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1,None)
+    kp2, des2 = sift.detectAndCompute(img2,None)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+    matches = bf.knnMatch(des1,des2, k=2)
+
+    # Apply ratio test
+    good = []
+    inx = 0
+    for m,n in matches:
+        if m.distance < 0.75*n.distance:
+            good.append([m])
+            print (kp1[inx].pt)
+            print (kp2[inx].pt)
+            # print (m.trainIdx, n.trainIdx)
+            # print (m.queryIdx, n.queryIdx)
+            # print (m.imgIdx, n.imgIdx)
+        inx = inx + 1
+    
+    # cv2.drawMatchesKnn expects list of lists as matches.
+    img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
+
+    plt.imshow(img3),plt.show()
+
+def BF_saveMatching(img1, img2, filename):
+    # Initiate SIFT detector
+    sift = cv2.xfeatures2d.SIFT_create()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1,None)
+    kp2, des2 = sift.detectAndCompute(img2,None)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+    matches = bf.knnMatch(des1,des2, k=2)
+
+    # Apply ratio test
+    good = []
+    for m,n in matches:
+        if m.distance < 0.75*n.distance:
+            good.append([m])
+
+    # cv2.drawMatchesKnn expects list of lists as matches.
+    img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
+
+    plt.imshow(img3),plt.savefig(filename)
+
+def FLANN_matching(img1, img2):
 
     # Initiate SIFT detector
     # sift = cv2.xfeatures2d.SIFT_create(0, 3, 0.08, 5)
@@ -32,11 +85,27 @@ def matching(img1, img2):
                     matchesMask = matchesMask,
                     flags = 0)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
-    for c, value in enumerate(matches, 1):
+    for c, value in enumerate(matches[0], 1):
         print(c, value)
-        
-    # print (type(matches))
-    # print (matches[11])
+
+    # print (type(matches[0][0]))
+    print (matches[0][0].distance)
+    print (matches[0][0].imgIdx)
+    print (matches[0][0].queryIdx)
+    print (matches[0][0].trainIdx)
+    print (matches[0][1].distance)
+    print (matches[0][1].imgIdx)
+    print (matches[0][1].queryIdx)
+    print (matches[0][1].trainIdx)
+    print ("=================")
+    print (matches[26][0].distance)
+    print (matches[26][0].imgIdx)
+    print (matches[26][0].queryIdx)
+    print (matches[26][0].trainIdx)
+    print (matches[26][1].distance)
+    print (matches[26][1].imgIdx)
+    print (matches[26][1].queryIdx)
+    print (matches[26][1].trainIdx)
     # print (matches[11][0].distance)
     # print (matches[11][1].distance)
     # print (matches[9])
@@ -46,7 +115,7 @@ def matching(img1, img2):
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
     plt.imshow(img3,),plt.show()
     
-def saveMatching(img1, img2, filename):
+def FLANN_saveMatching(img1, img2, filename):
     # Initiate SIFT detector
 
     ### SIFT parameter ###

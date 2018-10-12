@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import sonarGeometry
 import sonarPlotting
-import Feature_match
+import FeatureMatch
 import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 
@@ -138,14 +138,14 @@ if __name__ == '__main__':
     blockA.Creat_Block(imgCrop_A)
     # blockA.Show_allBlock()
 
-    # blockA.Adjsut_block(14)
+    blockA.Adjsut_block(14)
     # blockA.Show_allBlock()
 
     blockB = BlockImage()
     blockB.Creat_Block(imgCrop_B)
     # blockB.Show_allBlock()
 
-    # blockB.Adjsut_block(14)
+    blockB.Adjsut_block(14)
     # blockB.Show_allBlock()
 
     # blockC =BlockImage()
@@ -204,11 +204,14 @@ if __name__ == '__main__':
 
     ### BlockImage Feature Match ###
     if True:
-        # Feature_match.matching(blockA.blockImg[16], blockB.blockImg[16])
+        # FeatureMatch.FLANN_matching(blockA.blockImg[12], blockB.blockImg[12])
+        FeatureMatch.BF_matching(blockA.blockImg[12], blockB.blockImg[12])
         for i in range(0,30):
-            # Feature_match.matching(blockA.blockImg[i], blockB.blockImg[i])
-            saveName = "Img10_SIFT_Img15_#" + str(i) + ".png"
-            Feature_match.saveMatching(blockA.blockImg[i], blockB.blockImg[i], saveName)
+            # FeatureMatch.BF_matching(blockA.blockImg[i], blockB.blockImg[i])
+            # FeatureMatch.matching(blockA.blockImg[i], blockB.blockImg[i])
+            saveName = picPath + "\exp\Img10_SIFT_Img15_#" + str(i) + ".png"
+            # FeatureMatch.saveMatching(blockA.blockImg[i], blockB.blockImg[i], saveName)
+            # FeatureMatch.BF_saveMatching(blockA.blockImg[i], blockB.blockImg[i], saveName)
 
     ### Plot dots ###
     if False:
