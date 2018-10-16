@@ -2,6 +2,41 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
+def matchPosition_BF(img1, img2):
+    # Initiate SIFT detector
+    sift = cv2.xfeatures2d.SIFT_create()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1,None)
+    kp2, des2 = sift.detectAndCompute(img2,None)
+
+    # BFMatcher with default params
+    bf = cv2.BFMatcher()
+    matches = bf.knnMatch(des1,des2, k=2)
+
+    # Apply ratio test
+    good = []
+    ref_Position = []
+    shift_Position = []
+    inx = 0
+    for m,n in matches:
+        # print (m.distance, n.distance)
+        # print (m.imgIdx, n.imgIdx)
+        # print (m.queryIdx, n.queryIdx)
+        # print (m.trainIdx, n.trainIdx)
+
+        if m.distance < 0.75*n.distance:
+            good.append([m])
+            ref_Position.append(kp1[m.queryIdx].pt)
+            shift_Position.append(kp2[m.trainIdx].pt)
+            # print (kp1[inx].pt)
+            # print (kp2[inx].pt)
+    # print (ref_Position, shift_Position)
+    img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
+
+    # plt.imshow(img3),plt.show()
+    return ref_Position, shift_Position
+
 def BF_matching(img1, img2):
     # Initiate SIFT detector
     sift = cv2.xfeatures2d.SIFT_create()
@@ -18,15 +53,21 @@ def BF_matching(img1, img2):
     good = []
     inx = 0
     for m,n in matches:
-        if m.distance < 0.75*n.distance:
-            good.append([m])
-            print (kp1[inx].pt)
-            print (kp2[inx].pt)
+        # if m.distance < 0.75*n.distance:
+        good.append([m])
+            # print (kp1[inx].pt)
+            # print (kp2[inx].pt)
             # print (m.trainIdx, n.trainIdx)
             # print (m.queryIdx, n.queryIdx)
             # print (m.imgIdx, n.imgIdx)
         inx = inx + 1
-    
+
+    print ("+++++++++++++++++")
+    for i in range(0, len(kp1)):
+        print (kp1[i].pt)
+    print ("+++++++++++++++++")
+    for i in range(0, len(kp2)):
+        print (kp2[i].pt)
     # cv2.drawMatchesKnn expects list of lists as matches.
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
 

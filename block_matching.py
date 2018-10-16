@@ -4,6 +4,7 @@ import sonarGeometry
 import sonarPlotting
 import FeatureMatch
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 from scipy.stats import pearsonr
 
 picPath = "D:\Pai_work\pic_sonar"
@@ -121,44 +122,20 @@ class BlockImage:
 
 if __name__ == '__main__':
 
-    #### Import image and Preprocessing ####
-    ## image size [660 x 768]
+    ### Import image and Preprocessing ###
     img_A = AverageMultiLook(10, 5)
     imgCrop_A = img_A[0:500, 0:768]
     img_B = AverageMultiLook(15, 5)
     imgCrop_B = img_B[0:500, 0:768]
-    # img_C = AverageMultiLook(20, 5)
-    # imgCrop_C = img_C[0:500, 0:768]
-    # img_D = AverageMultiLook(25, 5)
-    # imgCrop_D = img_D[0:500, 0:768]
-
-    # sonarPlotting.subplot2(imgCrop_A, imgCrop_B, plot_name2)
 
     blockA = BlockImage()
     blockA.Creat_Block(imgCrop_A)
-    # blockA.Show_allBlock()
-
     blockA.Adjsut_block(14)
-    # blockA.Show_allBlock()
 
     blockB = BlockImage()
     blockB.Creat_Block(imgCrop_B)
-    # blockB.Show_allBlock()
-
     blockB.Adjsut_block(14)
-    # blockB.Show_allBlock()
 
-    # blockC =BlockImage()
-    # blockC.Creat_Block(imgCrop_C)
-
-    # blockD = BlockImage()
-    # blockD.Creat_Block(imgCrop_D)
-
-    # num = 27
-    # plot_name = ["Img10 block#" + str(num), "Img20 block#" + str(num), "Img30 block#" + str(num), "Img40 block#" + str(num)]
-    # sonarPlotting.subplot4(blockA.blockImg[num], blockB.blockImg[num], blockC.blockImg[num],blockD.blockImg[num], plot_name)
-
-    # print (blockA.averageMean, blockA.averageVar)
     ### Save Multilook image ###
     if False:
         for i in range(1,8):
@@ -203,17 +180,52 @@ if __name__ == '__main__':
             sonarPlotting.saveplot4(blockB.blockImg[i], res, dst, out, plot_name, "subplot" + str(i) + ".png")
 
     ### BlockImage Feature Match ###
-    if True:
-        # FeatureMatch.FLANN_matching(blockA.blockImg[12], blockB.blockImg[12])
-        FeatureMatch.BF_matching(blockA.blockImg[12], blockB.blockImg[12])
+    if False:
+        ref_Position = []
+        shift_Position = []
         for i in range(0,30):
-            # FeatureMatch.BF_matching(blockA.blockImg[i], blockB.blockImg[i])
-            # FeatureMatch.matching(blockA.blockImg[i], blockB.blockImg[i])
             saveName = picPath + "\exp\Img10_SIFT_Img15_#" + str(i) + ".png"
-            # FeatureMatch.saveMatching(blockA.blockImg[i], blockB.blockImg[i], saveName)
-            # FeatureMatch.BF_saveMatching(blockA.blockImg[i], blockB.blockImg[i], saveName)
+            # print ("Round : " + str(i))
+            refPos, shiftPos = FeatureMatch.matchPosition_BF(blockA.blockImg[i], blockB.blockImg[i])
+            if len(refPos) != 0:
+                for m in refPos:
+                    ref_Position.append(m)
+            if len(shiftPos) != 0:
+                for n in shiftPos:
+                    shift_Position.append(n)
+
+        input_row = []
+        input_col = []
+        for i in ref_Position:
+            xx, yy = i
+            input_row.append(xx)
+            input_col.append(yy)
+        print (input_row)
+        print (input_col)
+
+        output_row = []
+        output_col = []
+        for i in shift_Position:
+            xx, yy = i
+            output_row.append(xx)
+            output_col.append(yy)
+        print (output_row)
+        print (output_col)
+
 
     ### Plot dots ###
-    if False:
-        plt.plot(shiftRow_adjust, shiftCol_adjust, 'o', label='Original data', markersize=1)
+    if True:
+        out = np.array([5,4,3,2])
+        input_x = np.array([8,5,6,7])
+        input_y = np.array([3,7,9,1])
+
+        A = np.vstack([input_x, input_y, np.ones(len(input_x))]).T
+
+        a0, a1, a2 = np.linalg.lstsq(A, out)[0]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(input_x, input_y, out, c='r', marker=m)
+
+        # plt.plot(input_x, input_y, out, 'o', label='Original data', markersize=5)
         plt.show()
