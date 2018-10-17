@@ -215,6 +215,7 @@ if __name__ == '__main__':
         ## rewrite the line equation as y = Ap
         ## where A = [[x y 1]] and p = [[m], [c]]
         # TODO : Calculate affine for output_row
+        print (type(input_row))
         vectorA = np.vstack([input_row, input_col, np.ones(len(input_row))]).T
         a2, a1, a0 = np.linalg.lstsq(vectorA, output_row)[0]
 
@@ -232,38 +233,52 @@ if __name__ == '__main__':
         print (error_a/30.0)
 
         # ! Test re-Calculate affine by remove some input (error > 10)
-        for i in errInx:
-            input_row.remove(input_row[i])
-            input_col.remove(input_col[i])
-            output_row.remove(output_row[i])
+        # for i in errInx:
+        #     input_row.remove(input_row[i])
+        #     input_col.remove(input_col[i])
+        #     output_row.remove(output_row[i])
         
-        vectorA_Prime = np.vstack([input_row, input_col, np.ones(len(input_row))]).T
-        a2, a1, a0 = np.linalg.lstsq(vectorA_Prime, output_row)[0]
+        # vectorA_Prime = np.vstack([input_row, input_col, np.ones(len(input_row))]).T
+        # a2, a1, a0 = np.linalg.lstsq(vectorA_Prime, output_row)[0]
 
-        error_a = 0
-        errThres = 10.0
-        errInx = []
-        for i in range(0,len(input_row)):
-            res = (a2 * input_row[i]) + (a1 * input_col[i]) + a0
-            # print (output_row[i], res)
-            error_a = error_a + np.abs(output_row[i] - res)
-            print ("Error " + str(i) + " : " + str(np.abs(output_row[i] - res)))
-            if np.abs(output_row[i] - res) > errThres:
-                errInx.append(i)
-        print (errInx)
-        print (error_a/30.0)
+        # error_a = 0
+        # errThres = 10.0
+        # errInx = []
+        # for i in range(0,len(input_row)):
+        #     res = (a2 * input_row[i]) + (a1 * input_col[i]) + a0
+        #     # print (output_row[i], res)
+        #     error_a = error_a + np.abs(output_row[i] - res)
+        #     print ("Error " + str(i) + " : " + str(np.abs(output_row[i] - res)))
+        #     if np.abs(output_row[i] - res) > errThres:
+        #         errInx.append(i)
+        # print (errInx)
+        # print (error_a/30.0)
         
         # TODO : Calculate affine for output_col
-        # vectorB = np.vstack([input_row, input_col, np.ones(len(input_row))]).T
-        # b2, b1, b0 = np.linalg.lstsq(vectorB, output_col)[0]
+        vectorB = np.vstack([input_row, input_col, np.ones(len(input_row))]).T
+        b2, b1, b0 = np.linalg.lstsq(vectorB, output_col)[0]
 
-        # error_b = 0
+        error_b = 0
+        errInx = []
+        for i in range(0,len(input_row)):
+            res = (b2 * input_row[i]) + (b1 * input_col[i]) + b0
+            error_b = error_b + np.abs(output_col[i] - res)
+            print ("Error " + str(i) + " : " + str(np.abs(output_col[i] - res)))
+            if np.abs(output_col[i] - res) > errThres:
+                 errInx.append(i)
+        print (error_b/30.0)
 
-        # for i in range(0,len(input_row)):
-        #     res = (b2 * input_row[i]) + (b1 * input_col[i]) + b0
-        #     error_b = error_b + np.abs(output_col[i] - res)
-        #     print ("Error : " + str(np.abs(output_col[i] - res)))
-        # print (error_b/30.0)
+        # ! Test remap
+        y,x = np.mgrid[:img_A.shape[0],:img_A.shape[1]]
+        New_x = (a2 * x) + (a1 * y) + a0
+        New_y = (b2 * x) + (b1 * y) + b0
+
+        out1 = cv2.remap(img_A,New_x.astype('float32'),New_y.astype('float32'),cv2.INTER_LINEAR)
+
+        # cv2.imshow("Img1", out1)
+        # cv2.imshow("Img2", img_B)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     ### Plot dots ###
     if False:
