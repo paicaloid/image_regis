@@ -4,31 +4,10 @@ import sonarGeometry
 import sonarPlotting
 import FeatureMatch
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from scipy.stats import pearsonr
 
 picPath = "D:\Pai_work\pic_sonar"
 plot_name2 = ['1', '2']
 plot_name4 = ['1', '2', '3', '4']
-
-def multiplyImage(img1, img2):
-    # ! Change dtype to avoid overflow (unit8 -> int32)
-    img1 = img1.astype(np.int32)
-    img2 = img2.astype(np.int32)
-    out = cv2.multiply(img1, img2)
-    out = out/255.0
-    out = out.astype(np.uint8)
-    return out
-
-def Create_BlockImage(img):
-    # row, col = img.shape
-    blockList = []
-    for i in range(0,5):
-        for j in range(0,6):
-            block_img = img[i*100:(i+1)*100, j*128:(j+1)*128]
-            blockList.append(block_img)
-    # print (len(blockList))
-    return blockList
 
 def AverageMultiLook(start, stop):
     picName = "\RTheta_img_" + str(start) + ".jpg"
@@ -38,6 +17,15 @@ def AverageMultiLook(start, stop):
         img = cv2.imread(picPath + picName, 0)
         ref = cv2.addWeighted(ref, 0.5, img, 0.5, 0)
     return ref
+
+def multiplyImage(img1, img2):
+    # ! Change dtype to avoid overflow (unit8 -> int32)
+    img1 = img1.astype(np.int32)
+    img2 = img2.astype(np.int32)
+    out = cv2.multiply(img1, img2)
+    out = out/255.0
+    out = out.astype(np.uint8)
+    return out
 
 def findPhaseshift(img1, img2):
     fft_1 = np.fft.fft2(img1)
@@ -136,15 +124,6 @@ if __name__ == '__main__':
     blockB.Creat_Block(imgCrop_B)
     blockB.Adjsut_block(14)
 
-    ### Save Multilook image ###
-    if False:
-        for i in range(1,8):
-            img = AverageMultiLook(i*10, 10)
-            img = img[0:500, 0:768]
-            cv2.imshow("img", img)
-            cv2.waitKey(0)
-            cv2.imwrite(picPath + "\Result\multilook" + str(i*10) + ".png", img)
-        cv2.destroyAllWindows()
     ### Test Average PhaseShift of blockImage
     if False:
         shiftRow = []
@@ -193,15 +172,14 @@ if __name__ == '__main__':
             if len(shiftPos) != 0:
                 for n in shiftPos:
                     shift_Position.append(n)
-
+        print (len(ref_Position))
+        print (len(shift_Position))
         input_row = []
         input_col = []
         for i in ref_Position:
             xx, yy = i
             input_row.append(xx)
             input_col.append(yy)
-        # print (input_row)
-        # print (input_col)
 
         output_row = []
         output_col = []
@@ -209,8 +187,6 @@ if __name__ == '__main__':
             xx, yy = i
             output_row.append(xx)
             output_col.append(yy)
-        # print (output_row)
-        # print (output_col)
 
         ## rewrite the line equation as y = Ap
         ## where A = [[x y 1]] and p = [[m], [c]]
@@ -279,20 +255,3 @@ if __name__ == '__main__':
         # cv2.imshow("Img2", img_B)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-
-    ### Plot dots ###
-    if False:
-        out = np.array([5,4,3,2])
-        input_x = np.array([8,5,6,7])
-        input_y = np.array([3,7,9,1])
-
-        A = np.vstack([input_x, input_y, np.ones(len(input_x))]).T
-
-        a0, a1, a2 = np.linalg.lstsq(A, out)[0]
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(input_x, input_y, out, c='r', marker=m)
-
-        # plt.plot(input_x, input_y, out, 'o', label='Original data', markersize=5)
-        plt.show()

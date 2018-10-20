@@ -88,7 +88,7 @@ def BF_saveMatching(img1, img2, filename):
     # Apply ratio test
     good = []
     for m,n in matches:
-        if m.distance < 0.75*n.distance:
+        if m.distance < 0.6*n.distance:
             good.append([m])
 
     # cv2.drawMatchesKnn expects list of lists as matches.

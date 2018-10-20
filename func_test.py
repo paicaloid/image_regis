@@ -2,6 +2,7 @@ import numpy as np
 import sonarGeometry
 import sonarPlotting
 import cv2
+import matplotlib.pyplot as plt
 
 picPath = "D:\Pai_work\pic_sonar"
 inv_mask = cv2.imread(picPath + "\mask\inv_rr.png",0)
@@ -52,7 +53,7 @@ if __name__ == '__main__':
 
         cv2.destroyAllWindows()
     
-    if True:
+    if False:
         img_L = cv2.imread("D:\Pai_work\panorama-stitching\images\Bryce_left_02.png",0)
         img_R = cv2.imread("D:\Pai_work\panorama-stitching\images\Bryce_right_02.png",0)
 
@@ -86,3 +87,20 @@ if __name__ == '__main__':
         # cv2.destroyAllWindows()
 
         # sonarPlotting.subplot4(img_L, img_R, out, ref, plot_name4)
+
+    if True:
+        # import numpy as np
+        # y = np.array([-11, -23, -17, 0, 32, 8, 0, -29, 0, 0, 0, 0, 0, -19, 0, 0, 0, 11, 0, 48, 0, 0, 0, 32, 0, 17, -28, 0, -32, -10])
+        y = np.array([0, 0, 0, 8, 0, 0, 5, 0, 0, 8, 0, 0, 3, 0, 0, 8, 0, 0, 2, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0])
+        x = np.arange(30)
+
+        A = np.vstack([x, np.ones(len(x))]).T
+        print (A)
+
+        m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+        print (m, c)
+
+        plt.plot(x, y, 'o', label='Original data', markersize=10)
+        plt.plot(x, m*x + c, 'r', label='Fitted line')
+        plt.legend()
+        plt.show()
