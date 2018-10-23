@@ -35,5 +35,14 @@ if __name__ == '__main__':
     # rp.polynomialRemap(img1, paramA, paramB)
     
     # TODO : Fourier part
-    position = rp.fourierBlockImg(imgRef, imgFloat)
-    print (position)
+    # position = rp.fourierBlockImg(imgRef, imgFloat)
+    # print (position)
+
+    # TODO : Test CA-CFAR
+    res = rp.cafar(img1, 41, 15, 0.27)
+    res = res.astype(np.uint8)
+
+    cv2.imshow("img", img1)
+    cv2.imshow("CFAR", res)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()

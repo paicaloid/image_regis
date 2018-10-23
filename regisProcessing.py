@@ -6,7 +6,8 @@ import FeatureMatch
 
 picPath = "D:\Pai_work\pic_sonar"
 
-def cafar (img_gray, box_size, guard_size, pfa):
+## Cell-Averaging Constant False Alarm Rate (CA-CFAR)
+def cafar(img_gray, box_size, guard_size, pfa):
     n_ref_cell = (box_size * box_size) - (guard_size * guard_size)
     alpha = n_ref_cell * (math.pow(pfa, (-1.0/n_ref_cell)) - 1)
 
