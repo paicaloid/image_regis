@@ -20,6 +20,7 @@ def cafar(img_gray, box_size, guard_size, pfa):
     beta_pow = cv2.filter2D(img_gray, ddepth = cv2.CV_32F, kernel = kernel_beta)
     thres = alpha * (beta_pow)
     out = (255 * (img_gray > thres)) + (0 * (img_gray < thres))
+    out = out.astype(np.uint8)
     return out
 
 def AverageMultiLook(start, stop):
@@ -66,16 +67,60 @@ def findShiftPosition(shifting):
 
 def fourierBlockImg(bImg1, bImg2):
     pos = []
+    fix_pos = []
+    row, col = bImg1.blockImg[0].shape
+    print (row, col)
     for i in range(0,30):
         phaseShift = findPhaseshift(bImg1.blockImg[i], bImg2.blockImg[i])
         shift = findShiftPosition(phaseShift)
+        fix_shift = findShiftPosition(phaseShift)
+        shift = list(shift)
+        fix_shift = list(fix_shift)
         pos.append(shift)
-    return pos
+
+        if fix_shift[0] > row/2:
+            fix_shift[0] = int(row/2 - fix_shift[0])
+        if fix_shift[1] > col/2:
+            fix_shift[1] = int(col/2 - fix_shift[1])
+        fix_pos.append(fix_shift)
+
+        # print (shift, fix_shift)
+    # print (pos)
+    # print (fix_pos)
+    return pos, fix_pos
 
 def matchingPair(bImg1, bImg2):
     ref_Position = []
     shift_Position = []
     for i in range(0,30):
+        refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i])
+        if len(refPos) != 0:
+            for m in refPos:
+                ref_Position.append(m)
+        if len(shiftPos) != 0:
+            for n in shiftPos:
+                shift_Position.append(n)
+    
+    input_row = []
+    input_col = []
+    for i in ref_Position:
+        xx, yy = i
+        input_row.append(xx)
+        input_col.append(yy)
+
+    output_row = []
+    output_col = []
+    for i in shift_Position:
+        xx, yy = i
+        output_row.append(xx)
+        output_col.append(yy)
+
+    return input_row, input_col, output_row, output_col
+
+def matchingSpecific(bImg1, bImg2, inxList):
+    ref_Position = []
+    shift_Position = []
+    for i in inxList:
         refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i])
         if len(refPos) != 0:
             for m in refPos:
@@ -195,6 +240,7 @@ def polynomialRemap(img, listA, listB):
 class BlockImage:
     def __init__(self):
         self.blockImg = []
+        self.cfarImg = []
         self.meanList = []
         self.varList = []
         self.averageMean = 0
@@ -205,19 +251,23 @@ class BlockImage:
             for j in range(0,6):
                 block_img = img[i*100:(i+1)*100, j*128:(j+1)*128]
                 self.blockImg.append(block_img)
+                self.cfarImg.append(block_img)
 
     def Adjsut_block(self, shiftValue):
         for i in range(0,30):
             if np.mod(i,6) < 3:
                 self.blockImg[i] = self.blockImg[i][0:100, 0 + shiftValue:128]
+                self.cfarImg[i] = self.cfarImg[i][0:100, 0 + shiftValue:128]
             else:
                 self.blockImg[i] = self.blockImg[i][0:100, 0:128 - shiftValue]
+                self.cfarImg[i] = self.cfarImg[i][0:100, 0:128 - shiftValue]
     
+    # ! For cfarImage
     def Calculate_Mean_Var(self):
         for i in range(0,30):
             # print (np.mean(self.blockImg[i]))
-            self.meanList.append(np.mean(self.blockImg[i]))
-            self.varList.append(np.var(self.blockImg[i]))
+            self.meanList.append(np.mean(self.cfarImg[i]))
+            self.varList.append(np.var(self.cfarImg[i]))
         self.averageMean = np.mean(self.meanList)
         self.averageVar = np.mean(self.varList)
 
@@ -250,3 +300,8 @@ class BlockImage:
         for i in range(0, len(passList)):
             cv2.imwrite(picPath + "\Result\BlockImg_" + str(passList[i]) + ".png", self.blockImg[passList[i]])
     
+    def cfarBlock(self, box_size, guard_size, pfa, kernel_size):
+        kernel = np.ones((kernel_size,kernel_size),np.uint8)
+        for i in range(0,30):
+            self.cfarImg[i] = cafar(self.cfarImg[i], box_size, guard_size, pfa)
+            self.cfarImg[i] = cv2.morphologyEx(self.cfarImg[i], cv2.MORPH_OPEN, kernel)

@@ -53,21 +53,13 @@ def BF_matching(img1, img2):
     good = []
     inx = 0
     for m,n in matches:
-        # if m.distance < 0.75*n.distance:
-        good.append([m])
+        if m.distance < 0.75*n.distance:
+            good.append([m])
             # print (kp1[inx].pt)
             # print (kp2[inx].pt)
             # print (m.trainIdx, n.trainIdx)
             # print (m.queryIdx, n.queryIdx)
             # print (m.imgIdx, n.imgIdx)
-        inx = inx + 1
-
-    print ("+++++++++++++++++")
-    for i in range(0, len(kp1)):
-        print (kp1[i].pt)
-    print ("+++++++++++++++++")
-    for i in range(0, len(kp2)):
-        print (kp2[i].pt)
     # cv2.drawMatchesKnn expects list of lists as matches.
     img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
 
