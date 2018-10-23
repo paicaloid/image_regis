@@ -10,7 +10,7 @@ picPath = "D:\Pai_work\pic_sonar"
 
 if __name__ == '__main__':
     img1 = rp.AverageMultiLook(10, 5)
-    img2 = rp.AverageMultiLook(15, 5)
+    img2 = rp.AverageMultiLook(30, 5)
 
     imgRef = rp.BlockImage()
     imgRef.Creat_Block(img1)
