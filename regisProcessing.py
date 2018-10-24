@@ -93,7 +93,9 @@ def matchingPair(bImg1, bImg2):
     ref_Position = []
     shift_Position = []
     for i in range(0,30):
-        refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i])
+        saveName = picPath + "\exp\match#" + str(i) + ".png"
+        print (saveName)
+        refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i], saveName)
         if len(refPos) != 0:
             for m in refPos:
                 ref_Position.append(m)
@@ -121,7 +123,8 @@ def matchingSpecific(bImg1, bImg2, inxList):
     ref_Position = []
     shift_Position = []
     for i in inxList:
-        refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i])
+        saveName = picPath + "\exp\Spec_match#" + str(i) + ".png"
+        refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i], saveName)
         if len(refPos) != 0:
             for m in refPos:
                 ref_Position.append(m)
@@ -202,17 +205,17 @@ def polynomial_Approx(x_in, y_in, x_out, y_out):
         result = listA[0] + (listA[1]*x_in[i]) + (listA[2]*y_in[i]) + (listA[3]*xPow_in[i]) + (listA[4]*yPow_in[i]) + (listA[5]*xy_in[i])
         error_a = error_a + np.abs(x_out[i] - result)
         # print ("Error " + str(i) + " : " + str(np.abs(x_out[i] - result)))
-    print (error_a/30.0)
+    # print (error_a/30.0)
 
     error_b = 0
     for i in range(0,len(x_in)):
         result = listB[0] + (listB[1]*x_in[i]) + (listB[2]*y_in[i]) + (listB[3]*xPow_in[i]) + (listB[4]*yPow_in[i]) + (listB[5]*xy_in[i])
         error_b = error_a + np.abs(y_out[i] - result)
         # print ("Error " + str(i) + " : " + str(np.abs(y_out[i] - result)))
-    print (error_b/30.0)
+    # print (error_b/30.0)
 
-    print (listA)
-    print (listB)
+    # print (listA)
+    # print (listB)
     return listA, listB
 
 def linearRemap(img, listA, listB):
@@ -282,6 +285,12 @@ class BlockImage:
         for i in range(0,30):
             plt.subplot(5,6,i+1),plt.imshow(self.blockImg[i], cmap = 'gray')
             plt.title("Block #" + str(i)), plt.xticks([]), plt.yticks([])
+        plt.show()
+    
+    def Show_cafarBlock(self):
+        for i in range(0,30):
+            plt.subplot(5,6,i+1),plt.imshow(self.cfarImg[i], cmap = 'gray')
+            plt.title("cfarBlock #" + str(i)), plt.xticks([]), plt.yticks([])
         plt.show()
 
     def CheckAverageBlock(self):

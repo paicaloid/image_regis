@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 
-def matchPosition_BF(img1, img2):
+def matchPosition_BF(img1, img2, savename):
     # Initiate SIFT detector
     sift = cv2.xfeatures2d.SIFT_create()
 
@@ -19,23 +19,26 @@ def matchPosition_BF(img1, img2):
     ref_Position = []
     shift_Position = []
     inx = 0
-    for m,n in matches:
-        # print (m.distance, n.distance)
-        # print (m.imgIdx, n.imgIdx)
-        # print (m.queryIdx, n.queryIdx)
-        # print (m.trainIdx, n.trainIdx)
+    try:
+        for m,n in matches:
+            # print (m.distance, n.distance)
+            # print (m.imgIdx, n.imgIdx)
+            # print (m.queryIdx, n.queryIdx)
+            # print (m.trainIdx, n.trainIdx)
 
-        if m.distance < 0.75*n.distance:
-            good.append([m])
-            ref_Position.append(kp1[m.queryIdx].pt)
-            shift_Position.append(kp2[m.trainIdx].pt)
-            # print (kp1[inx].pt)
-            # print (kp2[inx].pt)
-    # print (ref_Position, shift_Position)
-    img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
+            if m.distance < 0.75*n.distance:
+                good.append([m])
+                ref_Position.append(kp1[m.queryIdx].pt)
+                shift_Position.append(kp2[m.trainIdx].pt)
+                # print (kp1[inx].pt)
+                # print (kp2[inx].pt)
+        # print (ref_Position, shift_Position)
+        img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
 
-    # plt.imshow(img3),plt.show()
-    return ref_Position, shift_Position
+        plt.imshow(img3),plt.savefig(savename)
+        return ref_Position, shift_Position
+    except:
+        return ref_Position, shift_Position
 
 def BF_matching(img1, img2):
     # Initiate SIFT detector
