@@ -4,7 +4,9 @@ import math
 import matplotlib.pyplot as plt
 import FeatureMatch
 
-picPath = "D:\Pai_work\pic_sonar"
+# picPath = "D:\Pai_work\pic_sonar"
+# picPath = "D:\Pai_work\pic_sonar\jpg_file"
+picPath = "D:\Pai_work\pic_sonar\ppm_file"
 
 ## Cell-Averaging Constant False Alarm Rate (CA-CFAR)
 def cafar(img_gray, box_size, guard_size, pfa):
@@ -24,10 +26,10 @@ def cafar(img_gray, box_size, guard_size, pfa):
     return out
 
 def AverageMultiLook(start, stop):
-    picName = "\RTheta_img_" + str(start) + ".jpg"
+    picName = "\RTheta_img_" + str(start) + ".ppm"
     ref = cv2.imread(picPath + picName, 0)
     for i in range(1, stop):
-        picName = "\RTheta_img_" + str(start+i) + ".jpg"
+        picName = "\RTheta_img_" + str(start+i) + ".ppm"
         img = cv2.imread(picPath + picName, 0)
         ref = cv2.addWeighted(ref, 0.5, img, 0.5, 0)
     ref = ref[0:500, 0:768]
@@ -94,7 +96,7 @@ def matchingPair(bImg1, bImg2):
     shift_Position = []
     for i in range(0,30):
         saveName = picPath + "\exp\match#" + str(i) + ".png"
-        print (saveName)
+        # print (saveName)
         refPos, shiftPos = FeatureMatch.matchPosition_BF(bImg1.blockImg[i], bImg2.blockImg[i], saveName)
         if len(refPos) != 0:
             for m in refPos:
@@ -225,7 +227,7 @@ def linearRemap(img, listA, listB):
 
     res = cv2.remap(img,new_x.astype('float32'),new_y.astype('float32'),cv2.INTER_LINEAR)
 
-    cv2.imshow("Img", res)
+    cv2.imshow("res", res)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 

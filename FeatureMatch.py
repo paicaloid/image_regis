@@ -3,23 +3,25 @@ import cv2
 from matplotlib import pyplot as plt
 
 def matchPosition_BF(img1, img2, savename):
-    # Initiate SIFT detector
-    sift = cv2.xfeatures2d.SIFT_create()
-
-    # find the keypoints and descriptors with SIFT
-    kp1, des1 = sift.detectAndCompute(img1,None)
-    kp2, des2 = sift.detectAndCompute(img2,None)
-
-    # BFMatcher with default params
-    bf = cv2.BFMatcher()
-    matches = bf.knnMatch(des1,des2, k=2)
-
-    # Apply ratio test
-    good = []
     ref_Position = []
     shift_Position = []
-    inx = 0
     try:
+        # Initiate SIFT detector
+        sift = cv2.xfeatures2d.SIFT_create()
+
+        # find the keypoints and descriptors with SIFT
+        kp1, des1 = sift.detectAndCompute(img1,None)
+        kp2, des2 = sift.detectAndCompute(img2,None)
+
+        # BFMatcher with default params
+        bf = cv2.BFMatcher()
+        matches = bf.knnMatch(des1,des2, k=2)
+
+        # Apply ratio test
+        good = []
+        
+        inx = 0
+    
         for m,n in matches:
             # print (m.distance, n.distance)
             # print (m.imgIdx, n.imgIdx)
