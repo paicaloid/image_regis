@@ -17,8 +17,8 @@ if __name__ == '__main__':
     args = vars(ap.parse_args())
 
     ## Import image ##
-    img1 = rp.AverageMultiLook(10, 5)
-    img2 = rp.AverageMultiLook(20, 5)
+    img1 = rp.AverageMultiLook(10, 1)
+    img2 = rp.AverageMultiLook(20, 1)
     
     print (img1.shape)
     print (img2.shape)

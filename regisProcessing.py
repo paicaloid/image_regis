@@ -4,9 +4,9 @@ import math
 import matplotlib.pyplot as plt
 import FeatureMatch
 
-# picPath = "D:\Pai_work\pic_sonar"
+picPath = "D:\Pai_work\pic_sonar"
 # picPath = "D:\Pai_work\pic_sonar\jpg_file"
-picPath = "D:\Pai_work\pic_sonar\ppm_file"
+# picPath = "D:\Pai_work\pic_sonar\ppm_file"
 
 ## Cell-Averaging Constant False Alarm Rate (CA-CFAR)
 def cafar(img_gray, box_size, guard_size, pfa):
@@ -26,10 +26,10 @@ def cafar(img_gray, box_size, guard_size, pfa):
     return out
 
 def AverageMultiLook(start, stop):
-    picName = "\RTheta_img_" + str(start) + ".ppm"
+    picName = "\RTheta_img_" + str(start) + ".jpg"
     ref = cv2.imread(picPath + picName, 0)
     for i in range(1, stop):
-        picName = "\RTheta_img_" + str(start+i) + ".ppm"
+        picName = "\RTheta_img_" + str(start+i) + ".jpg"
         img = cv2.imread(picPath + picName, 0)
         ref = cv2.addWeighted(ref, 0.5, img, 0.5, 0)
     ref = ref[0:500, 0:768]
