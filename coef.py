@@ -46,6 +46,7 @@ def coefShift(img1, img2, num):
     shiftRow = posShift[0]
     shiftCol = posShift[1][0] - num
     print (shiftRow, shiftCol)
+    return shiftRow, shiftCol
 
 if __name__ == '__main__':
     # img1 = rp.AverageMultiLook(10,1)
@@ -53,14 +54,70 @@ if __name__ == '__main__':
 
     # coefShift(img1, img2, 10)
 
+    ### Test colBlock ###
+    if False:
+        img1 = rp.AverageMultiLook(10,1)
+        imgBlock_1 = rp.BlockImage()
+        imgBlock_1.Creat_colBlock(img1)
+        imgBlock_1.Adjust_colBlock(14)
+
+        img2 = rp.AverageMultiLook(15,1)
+        imgBlock_2 = rp.BlockImage()
+        imgBlock_2.Creat_colBlock(img2)
+        imgBlock_2.Adjust_colBlock(14)
+
+        xxx, yyy = rp.fourierColBlock(imgBlock_1, imgBlock_2)
+
+        print (xxx)
+        print (yyy)
+
+        # print (imgBlock_1.blockImg[0].shape)
+
+        # imgBlock_1.blockImg[0] = imgBlock_1.blockImg[0][0:500, 14:128]
+
+        # cv2.imshow("img1", imgBlock_1.blockImg[0])
+        # cv2.imshow("img2", imgBlock_1.blockImg[1])
+        # cv2.imshow("img3", imgBlock_1.blockImg[2])
+        # cv2.imshow("img4", imgBlock_1.blockImg[3])
+        # cv2.imshow("img5", imgBlock_1.blockImg[4])
+        # cv2.imshow("img6", imgBlock_1.blockImg[5])
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+        # imgBlock_1.Adjust_colBlock(14)
+        
+        # cv2.imshow("img33", imgBlock_1.blockImg[2])
+        # cv2.imshow("img44", imgBlock_1.blockImg[3])
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
     ### Test loop find shift ###
-    if True:
+    if False:
         inx = np.arange(11, 21, 1)
         for num in inx:
             img1 = rp.AverageMultiLook(num-1, 1)
             img2 = rp.AverageMultiLook(num, 1)
             coefShift(img1, img2, 10)
             print ("===============")
+
+    if False:
+        img1 = rp.AverageMultiLook(10,1)
+        inx = np.arange(11, 21, 1)
+        rowShift = [-1,-2,-4,-5,-6,-7,-9,-11,-12,-14]
+        colShift = [0,0,0,-1,-2,-3,-3,-2,-1,-1]
+
+        # rowShift = rowShift * 5
+        # colShift = colShift * 5
+        # print (rowShift)
+        # print (colShift)
+
+        for i in range(0,10):
+            img2 = rp.AverageMultiLook(i+11, 1)
+            trans_matrix = np.float32([[1,0,colShift[i]*5],[0,1,rowShift[i]*5]])
+            img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
+            img1 = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+            saveName = "imgAdd_" + str(i) + ".jpg"
+            cv2.imwrite(saveName, img1)
 
     ### Test add image ###
     if False:
@@ -157,3 +214,57 @@ if __name__ == '__main__':
                 # print ("++++++")
                 # rowList.append(colList)
         employee_file.close()
+    
+    ### Test loopChain shift ###
+    if False:
+        inx = np.arange(11, 100, 1)
+        firstCheck = True
+        sumRow = 0
+        sumCol = 0
+        for num in inx:
+            img1 = rp.AverageMultiLook(num-1, 1)
+            img2 = rp.AverageMultiLook(num, 1)
+            rowShift, colShift = coefShift(img1, img2, 5)
+            print ("===============")
+            
+            if firstCheck:
+                firstCheck = False
+                sumRow = sumRow + rowShift
+                sumCol = sumCol + colShift
+                trans_matrix = np.float32([[1,0,sumCol],[0,1,sumRow]])
+                img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
+                out = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+            else:
+                sumRow = sumRow + rowShift
+                sumCol = sumCol + colShift
+                trans_matrix = np.float32([[1,0,sumCol],[0,1,sumRow]])
+                img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
+                out = cv2.addWeighted(out, 0.5, img2, 0.5, 0)
+            picPath = "D:\Pai_work\pic_sonar\\add"
+            saveName = "\imgChainAdd_" + str(num) + ".jpg"
+            cv2.imwrite(picPath + saveName, out)
+    
+    ### Test Big Picture ###
+    if True:
+        baseImg = np.zeros((800,800), dtype=int)
+
+        img1 = rp.AverageMultiLook(10,1)
+        
+        ### Create ROI
+        rows,cols = img1.shape
+        roi = baseImg[0:rows, 0:cols]
+
+        ### Create Mask
+        # ret, mask = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY)
+        # mask_inv = cv2.bitwise_not(mask)
+        mask = np.ones((rows,cols,3))
+        # mask = cv2.cvtColor(mask,cv2.COLOR_BGR2GRAY)
+        mask_inv = np.zeros((rows,cols), dtype=int)
+
+        cv2.imshow("mask", mask)
+        cv2.imshow("mask_inv", mask_inv)
+        # cv2.imshow("base", baseImg)
+        # cv2.imshow("img1", img1)
+        # cv2.imshow("out", out)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()

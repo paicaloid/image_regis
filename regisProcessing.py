@@ -86,9 +86,26 @@ def fourierBlockImg(bImg1, bImg2):
             fix_shift[1] = int(col/2 - fix_shift[1])
         fix_pos.append(fix_shift)
 
-        # print (shift, fix_shift)
-    # print (pos)
-    # print (fix_pos)
+    return pos, fix_pos
+
+def fourierColBlock(bImg1, bImg2):
+    pos = []
+    fix_pos = []
+    row, col = bImg1.blockImg[0].shape
+    print (row, col)
+    for i in range(0,6):
+        phaseShift = findPhaseshift(bImg1.blockImg[i], bImg2.blockImg[i])
+        shift = findShiftPosition(phaseShift)
+        fix_shift = findShiftPosition(phaseShift)
+        shift = list(shift)
+        fix_shift = list(fix_shift)
+        pos.append(shift)
+
+        if fix_shift[0] > row/2:
+            fix_shift[0] = int(row/2 - fix_shift[0])
+        if fix_shift[1] > col/2:
+            fix_shift[1] = int(col/2 - fix_shift[1])
+        fix_pos.append(fix_shift)
     return pos, fix_pos
 
 def matchingPair(bImg1, bImg2):
@@ -258,6 +275,12 @@ class BlockImage:
                 self.blockImg.append(block_img)
                 self.cfarImg.append(block_img)
 
+    def Creat_colBlock(self, img):
+        for i in range(0,6):
+            block_img = img[0:500, i*128:(i+1)*128]
+            self.blockImg.append(block_img)
+            self.cfarImg.append(block_img)
+
     def Adjsut_block(self, shiftValue):
         for i in range(0,30):
             if np.mod(i,6) < 3:
@@ -267,6 +290,17 @@ class BlockImage:
                 self.blockImg[i] = self.blockImg[i][0:100, 0:128 - shiftValue]
                 self.cfarImg[i] = self.cfarImg[i][0:100, 0:128 - shiftValue]
     
+    def Adjust_colBlock(self, shiftValue):
+        for i in range(0,6):
+            if i < 3:
+                print ("---")
+                self.blockImg[i] = self.blockImg[i][0:500, 0 + shiftValue:128]
+                self.cfarImg[i] = self.cfarImg[i][0:500, 0 + shiftValue:128]
+            else:
+                print ("+++")
+                self.blockImg[i] = self.blockImg[i][0:500, 0:128 - shiftValue]
+                self.cfarImg[i] = self.cfarImg[i][0:500, 0:128 - shiftValue]
+
     # ! For cfarImage
     def Calculate_Mean_Var(self):
         for i in range(0,30):
