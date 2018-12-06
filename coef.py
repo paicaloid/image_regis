@@ -6,6 +6,56 @@ import sonarGeometry
 import regisProcessing as rp
 from matplotlib import pyplot as plt
 
+def create_coefImg(img2):
+    # Load two images
+    img1 = np.zeros((800,800), dtype=np.uint8)
+
+    # I want to put logo on top-left corner, So I create a ROI
+    rows,cols = img2.shape
+    roi = img1[0:rows, 0:cols ]
+
+    # Now create a mask of logo and create its inverse mask also
+    # img2gray = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+    ret, mask = cv2.threshold(img2, 10, 255, cv2.THRESH_BINARY)
+    mask_inv = cv2.bitwise_not(mask)
+
+    # Now black-out the area of logo in ROI
+    img1_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
+
+    # Take only region of logo from logo image.
+    img2_fg = cv2.bitwise_and(img2,img2,mask = mask)
+
+    # Put logo in ROI and modify the main image
+    dst = cv2.add(img1_bg,img2_fg)
+    img1[150:rows+150, 16:cols+16 ] = dst
+
+    return img1
+
+def shift_coefImg(img2, Rshift, Cshift):
+    # Load two images
+    img1 = np.zeros((800,800), dtype=np.uint8)
+
+    # I want to put logo on top-left corner, So I create a ROI
+    rows,cols = img2.shape
+    roi = img1[0:rows, 0:cols ]
+
+    # Now create a mask of logo and create its inverse mask also
+    # img2gray = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+    ret, mask = cv2.threshold(img2, 10, 255, cv2.THRESH_BINARY)
+    mask_inv = cv2.bitwise_not(mask)
+
+    # Now black-out the area of logo in ROI
+    img1_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
+
+    # Take only region of logo from logo image.
+    img2_fg = cv2.bitwise_and(img2,img2,mask = mask)
+
+    # Put logo in ROI and modify the main image
+    dst = cv2.add(img1_bg,img2_fg)
+    img1[150+Rshift:rows+150+Rshift, 16+Cshift:cols+16+Cshift ] = dst
+
+    return img1
+
 def coefShift(img1, img2, num):
     colRange = np.arange((-1)*num, num+1, 1)
     rowRange = colRange * (-1)
@@ -41,18 +91,29 @@ def coefShift(img1, img2, num):
         # print (rowInx, max(enumerate(colList), key=(lambda x: x[1])))
     # print (coefList)
     # print (rowList)
-    print (rowList[np.argmax(coefList)])
+    # print (rowList[np.argmax(coefList)])
     posShift = rowList[np.argmax(coefList)]
     shiftRow = posShift[0]
     shiftCol = posShift[1][0] - num
-    print (shiftRow, shiftCol)
+    # print (shiftRow, shiftCol)
     return shiftRow, shiftCol
 
 if __name__ == '__main__':
     # img1 = rp.AverageMultiLook(10,1)
-    # img2 = rp.AverageMultiLook(11,1)
+    # img2 = rp.AverageMultiLook(20,1)
 
-    # coefShift(img1, img2, 10)
+    # out = create_coefImg(img1)
+
+    # cv2.imshow('out',out)
+    # cv2.waitKey(0)
+
+    # res = shift_coefImg(img2, -14, -1)
+
+    # imx = cv2.addWeighted(out, 0.5, res, 0.5, 0)
+
+    # cv2.imshow('res',imx)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
 
     ### Test colBlock ###
     if False:
@@ -217,7 +278,7 @@ if __name__ == '__main__':
     
     ### Test loopChain shift ###
     if False:
-        inx = np.arange(11, 100, 1)
+        inx = np.arange(11, 80, 1)
         firstCheck = True
         sumRow = 0
         sumCol = 0
@@ -231,40 +292,107 @@ if __name__ == '__main__':
                 firstCheck = False
                 sumRow = sumRow + rowShift
                 sumCol = sumCol + colShift
-                trans_matrix = np.float32([[1,0,sumCol],[0,1,sumRow]])
-                img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
-                out = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+                if False:
+                    trans_matrix = np.float32([[1,0,sumCol],[0,1,sumRow]])
+                    img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
+                    out = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+                if True:
+                    img1 = create_coefImg(img1)
+                    img2 = shift_coefImg(img2, sumRow, sumCol)
+                    out = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+
             else:
                 sumRow = sumRow + rowShift
                 sumCol = sumCol + colShift
-                trans_matrix = np.float32([[1,0,sumCol],[0,1,sumRow]])
-                img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
-                out = cv2.addWeighted(out, 0.5, img2, 0.5, 0)
+                if False:
+                    trans_matrix = np.float32([[1,0,sumCol],[0,1,sumRow]])
+                    img2 = cv2.warpAffine(img2, trans_matrix, (768,500))
+                    out = cv2.addWeighted(out, 0.5, img2, 0.5, 0)
+                if True:
+                    img2 = shift_coefImg(img2, sumRow, sumCol)
+                    out = cv2.addWeighted(out, 0.5, img2, 0.5, 0)
+            print (sumRow, sumCol)
             picPath = "D:\Pai_work\pic_sonar\\add"
-            saveName = "\imgChainAdd_" + str(num) + ".jpg"
+            saveName = "\coefAdd_" + str(num) + ".jpg"
+            print (saveName)
             cv2.imwrite(picPath + saveName, out)
     
     ### Test Big Picture ###
-    if True:
-        baseImg = np.zeros((800,800), dtype=int)
+    if False:
+        # Load two images
+        # img1 = cv2.imread('messi5.jpg')
+        # img2 = cv2.imread('opencv_logo.png')
+        img1 = np.zeros((800,800), dtype=np.uint8)
+        # img1 = img1.astype(np.uint8)
+        img3 = np.zeros((800,800), dtype=np.uint8)
+        # img3 = img3.astype(np.uint8)
+        img2 = rp.AverageMultiLook(10,1)
 
-        img1 = rp.AverageMultiLook(10,1)
+        # I want to put logo on top-left corner, So I create a ROI
+        rows,cols = img2.shape
+        roi = img1[0:rows, 0:cols ]
+
+        # Now create a mask of logo and create its inverse mask also
+        # img2gray = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY)
+        ret, mask = cv2.threshold(img2, 10, 255, cv2.THRESH_BINARY)
+        mask_inv = cv2.bitwise_not(mask)
+
+        # Now black-out the area of logo in ROI
+        img1_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
+
+        # Take only region of logo from logo image.
+        img2_fg = cv2.bitwise_and(img2,img2,mask = mask)
+
+        # Put logo in ROI and modify the main image
+
         
-        ### Create ROI
-        rows,cols = img1.shape
-        roi = baseImg[0:rows, 0:cols]
+        img1_bg = img1_bg.astype(np.uint8)
+        print (img1_bg.dtype)
+        print (img2_fg.dtype)
+        # img2_fg = img2_fg.astype(np.uint8)
+        dst = cv2.add(img1_bg,img2_fg)
+        img1[150:rows+150, 16:cols+16 ] = dst
+        img3[250:rows+250, 16:cols+16 ] = dst
 
-        ### Create Mask
-        # ret, mask = cv2.threshold(img1, 0, 255, cv2.THRESH_BINARY)
-        # mask_inv = cv2.bitwise_not(mask)
-        mask = np.ones((rows,cols,3))
-        # mask = cv2.cvtColor(mask,cv2.COLOR_BGR2GRAY)
-        mask_inv = np.zeros((rows,cols), dtype=int)
+        out = cv2.addWeighted(img1, 0.5, img3, 0.5, 0)
 
-        cv2.imshow("mask", mask)
-        cv2.imshow("mask_inv", mask_inv)
-        # cv2.imshow("base", baseImg)
-        # cv2.imshow("img1", img1)
-        # cv2.imshow("out", out)
+        cv2.imshow('res',out)
+        # cv2.imshow('img1_bg',img1_bg)
+        # cv2.imshow('img2_fg',img2_fg)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+
+    ### Test Mosaicing ###
+    if False:
+        img1 = cv2.imread("D:\Pai_work\pic_sonar\\add\coefAdd_11.jpg",0)
+        img2 = cv2.imread("D:\Pai_work\pic_sonar\\add\coefAdd_79.jpg",0)
+
+        dst = cv2.add(img1,img2)
+
+        print (img1.dtype)
+        print (img2.dtype)
+        print (dst.dtype)
+
+        cv2.imshow("dst", dst)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    ### Test Stereo ###
+    if True:
+        imgL = cv2.imread("D:\Pai_work\pic_sonar\Rotate_img_10.jpg",0)
+        imgR = cv2.imread("D:\Pai_work\pic_sonar\Rotate_img_90.jpg",0)
+
+        imgL = imgL[0:768, 0:500]
+        imgR = imgR[0:768, 0:500]
+
+        # cv2.imshow("dst", imgL)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+        # stereo = cv2.createStereoBM(numDisparities=16, blockSize=15)
+        # stereo = cv2.StereoBM(cv2.STEREO_BM_BASIC_PRESET,ndisparities=16, SADWindowSize=15)
+        # stereo = cv2.StereoBM(ndisparities=16, SADWindowSize=15)
+        stereo = cv2.StereoBM_create(numDisparities = 128, blockSize = 15)
+        disparity = stereo.compute(imgL,imgR)
+        plt.imshow(disparity,'gray')
+        plt.show()

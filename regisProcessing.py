@@ -35,6 +35,16 @@ def AverageMultiLook(start, stop):
     ref = ref[0:500, 0:768]
     return ref
 
+def ColorMultiLook(start, stop):
+    picName = "\RTheta_img_" + str(start) + ".jpg"
+    ref = cv2.imread(picPath + picName)
+    for i in range(1, stop):
+        picName = "\RTheta_img_" + str(start+i) + ".jpg"
+        img = cv2.imread(picPath + picName)
+        ref = cv2.addWeighted(ref, 0.5, img, 0.5, 0)
+    ref = ref[0:500, 0:768]
+    return ref
+
 def multiplyImage(img1, img2):
     # ! Change dtype to avoid overflow (unit8 -> int32)
     img1 = img1.astype(np.int32)
