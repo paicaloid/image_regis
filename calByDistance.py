@@ -72,7 +72,10 @@ class positioning:
             cv2.circle(self.map_obj, center_1, 5, 85, -1)
             cv2.circle(self.map_obj, center_2, 5, 170, -1)
             cv2.circle(self.map_obj, center_3, 5, 255, -1)
-            
+        
+        cv2.circle(self.map_auv, (self.auv_pose[0][1],self.auv_pose[0][0]), 10, 85, -1)
+        cv2.circle(self.map_auv, (self.auv_pose[1][1],self.auv_pose[1][0]), 10, 170, -1)
+        cv2.circle(self.map_auv, (self.auv_pose[2][1],self.auv_pose[2][0]), 10, 255, -1)
 
     def read_dvl(self, sec):
         first_check = True
@@ -173,3 +176,4 @@ if __name__ == '__main__':
     time_index3 = 15
 
     position = positioning(time_index1, time_index2, time_index3)
+    # print (position.auv_pose)
