@@ -8,6 +8,90 @@ import regisProcessing as rp
 import FeatureMatch
 from matplotlib import pyplot as plt
 
+class block_image:
+    def __init__(self, img1, img2, img3):
+        self.blockImg1 = []
+        self.blockImg2 = []
+        self.blockImg3 = []
+        self.row_match = []
+        self.col_match = []
+
+        self.create_block(img1, img2, img3, 5, 6)
+        # self.display(1)
+        # self.display(2)
+        # self.display(3)
+        self.matching(self.blockImg1, self.blockImg2, self.blockImg3, 5, 6)
+
+    def create_block(self, img1, img2, img3, row, col):
+        for i in range(0,row):
+            imgList1 = []
+            imgList2 = []
+            imgList3 = []
+            for j in range(0,col):
+                block_img1 = img1[i*100:(i+1)*100, j*128:(j+1)*128]
+                imgList1.append(block_img1)
+
+                block_img2 = img2[i*100:(i+1)*100, j*128:(j+1)*128]
+                imgList2.append(block_img2)
+
+                block_img3 = img3[i*100:(i+1)*100, j*128:(j+1)*128]
+                imgList3.append(block_img3)
+            self.blockImg1.append(imgList1)
+            self.blockImg2.append(imgList2)
+            self.blockImg3.append(imgList3)
+    
+    def display(self, imgNum):
+        inx = 1
+        if imgNum == 1:
+            for rowBlock in self.blockImg1:
+                for block in rowBlock:
+                    plt.subplot(5,6,inx),plt.imshow(block, cmap = 'gray')
+                    plt.title("cfarBlock #" + str(inx)), plt.xticks([]), plt.yticks([])
+                    inx += 1
+            plt.show()
+        elif imgNum == 2:
+            for rowBlock in self.blockImg2:
+                for block in rowBlock:
+                    plt.subplot(5,6,inx),plt.imshow(block, cmap = 'gray')
+                    plt.title("cfarBlock #" + str(inx)), plt.xticks([]), plt.yticks([])
+                    inx += 1
+            plt.show()
+        elif imgNum == 3:
+            for rowBlock in self.blockImg3:
+                for block in rowBlock:
+                    plt.subplot(5,6,inx),plt.imshow(block, cmap = 'gray')
+                    plt.title("cfarBlock #" + str(inx)), plt.xticks([]), plt.yticks([])
+                    inx += 1
+            plt.show()
+    
+    def matching(self, block_img1, block_img2, block_img3, row_len, col_len):
+        savename = "0" # ! Don't save plot
+        inx = 1
+        for row in range(row_len):
+            for col in range(col_len):
+                refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(block_img1[row][col], block_img2[row][col], savename)
+                refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(block_img2[row][col], block_img3[row][col], savename)
+
+                row_match = []
+                col_match = []
+                inx_1 = 0
+                for x,y in shiftPos1:
+                    inx_2 = 0
+                    for xx,yy in refPos2:
+                        if x == xx and y == yy:
+                            row_match.append((refPos1[inx_1][0] + (row*100), xx + (row*100), shiftPos2[inx_2][0] + (row*100)))
+                            col_match.append((refPos1[inx_1][1] + (col*128), yy + (col*128), shiftPos2[inx_2][1] + (col*128)))
+                            break
+                        else:
+                            inx_2 = inx_2 + 1
+                    inx_1 = inx_1 + 1
+                if len(row_match) != 0:
+                    print ("block number : " + str(inx))
+                    print (row_match)
+                    print (col_match)
+                inx += 1
+
+
 class positioning:
     def __init__(self, inx_1, inx_2, inx_3):
         self.image_perSec = 3.2
@@ -31,27 +115,38 @@ class positioning:
         self.image_2 = rp.ColorMultiLook(int(self.image_perSec * inx_2), 5)
         self.image_3 = rp.ColorMultiLook(int(self.image_perSec * inx_3), 5)
 
-        self.Full_matching()
-
-        self.read_dvl(inx_1)
-        self.read_dvl(inx_2)
-        self.read_dvl(inx_3)
-        self.auv_position()
+        kernel = np.ones((7,7),np.uint8)
+        self.cfar_img1 = rp.cafar(self.image_1, 59, 11, 0.25)
+        self.cfar_img1 = cv2.morphologyEx(self.cfar_img1, cv2.MORPH_OPEN, kernel)
+        self.cfar_img2 = rp.cafar(self.image_2, 59, 11, 0.25)
+        self.cfar_img2 = cv2.morphologyEx(self.cfar_img2, cv2.MORPH_OPEN, kernel)
+        self.cfar_img3 = rp.cafar(self.image_3, 59, 11, 0.25)
+        self.cfar_img3 = cv2.morphologyEx(self.cfar_img3, cv2.MORPH_OPEN, kernel)
         
-        self.distance_auv()
-        # self.distance()
-        
-        for i in range(0,4):
-            self.solve(i)
+        # self.Full_matching()
+        # self.draw_circle()
 
-        # self.update_map()
-        self.genarate_map(660,768)
+        # self.read_dvl(inx_1)
+        # self.read_dvl(inx_2)
+        # self.read_dvl(inx_3)
+        # self.auv_position()
+        
+        # self.distance_auv()
+        
+        # for i in range(0,4):
+        #     self.solve(i)
+        # self.genarate_map(660,768)
 
     def Full_matching(self):
         savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching1.jpg"
         refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.image_1, self.image_2, savename)
         savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching2.jpg"
         refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.image_2, self.image_3, savename)
+
+        # savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching1.jpg"
+        # refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.cfar_img1, self.cfar_img2, savename)
+        # savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching2.jpg"
+        # refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.cfar_img2, self.cfar_img3, savename)
 
         inx_1 = 0
         for x,y in shiftPos1:
@@ -64,7 +159,8 @@ class positioning:
                 else:
                     inx_2 = inx_2 + 1
             inx_1 = inx_1 + 1
-        # print (self.triple_Row, self.triple_Col)
+        print (self.triple_Row, self.triple_Col)
+        print (len(self.triple_Col))
 
     def read_dvl(self, sec):
         first_check = True
@@ -131,7 +227,8 @@ class positioning:
         # print (matrix_B)
         print (result[0], result[1], result[2])
         
-        self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
+        # self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
+        self.result_pose.append((int(result[0]), int(result[1]), int(result[2])))
 
     def distance(self):
         auv_rowPos = 660
@@ -214,11 +311,29 @@ class positioning:
             cv2.circle(self.image_2, center_2, 10, rand_color, -1)
             cv2.circle(self.image_3, center_3, 10, rand_color, -1)
 
+            cv2.imshow("cafar1", self.image_1)
+            cv2.imshow("cafar2", self.image_2)
+            cv2.imshow("cafar3", self.image_3)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+
     def update_map(self):
         print (self.result_pose)
         inx = 1
         for pose in self.result_pose:
-            center = (pose[1], pose[0])
+            # ! ++++++++++++++++++++ ! #
+            if pose[0] < 0:
+                row_pos = pose[0] + 660
+            else:
+                row_pos = pose[0]
+            if pose[1] < 0:
+                col_pos = pose[1] + 768
+            else:
+                col_pos = pose[1]
+            # ! ++++++++++++++++++++ ! #
+            center = (col_pos, row_pos)
+            print (center)
             cv2.circle(self.map_dis, center, 10, 60 * inx, -1)
             inx = inx + 1
 
@@ -229,3 +344,6 @@ if __name__ == '__main__':
     time_index3 = 15
 
     position = positioning(time_index1, time_index2, time_index3)
+    block_img = block_image(position.image_1, position.image_2, position.image_3)
+    # block_img.matching(block_img.blockImg1, block_img.blockImg2, block_img.blockImg3, 5, 6)
+    

@@ -7,6 +7,12 @@ def matchPosition_BF(img1, img2, savename):
     shift_Position = []
     try:
         # Initiate SIFT detector
+        nfeatures = 0
+        nOctaveLayers = 3
+        contrastThreshold = 0.04
+        edgeThreshold = 5
+        sigma = 1.6
+        # sift = cv2.xfeatures2d.SIFT_create(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma)
         sift = cv2.xfeatures2d.SIFT_create()
 
         # find the keypoints and descriptors with SIFT
@@ -36,8 +42,8 @@ def matchPosition_BF(img1, img2, savename):
                 # print (kp2[inx].pt)
         # print (ref_Position, shift_Position)
         img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
-
-        plt.imshow(img3),plt.savefig(savename)
+        if savename != "0":
+            plt.imshow(img3),plt.savefig(savename)
         return ref_Position, shift_Position
     except:
         return ref_Position, shift_Position

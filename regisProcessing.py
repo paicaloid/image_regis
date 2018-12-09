@@ -10,6 +10,10 @@ picPath = "D:\Pai_work\pic_sonar"
 
 ## Cell-Averaging Constant False Alarm Rate (CA-CFAR)
 def cafar(img_gray, box_size, guard_size, pfa):
+
+    if(len(img_gray) == 3):
+        img_gray = cv2.cvtColor(img_gray, cv2.COLOR_BGR2GRAY)
+
     n_ref_cell = (box_size * box_size) - (guard_size * guard_size)
     alpha = n_ref_cell * (math.pow(pfa, (-1.0/n_ref_cell)) - 1)
 
