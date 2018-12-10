@@ -10,10 +10,10 @@ def matchPosition_BF(img1, img2, savename):
         nfeatures = 0
         nOctaveLayers = 3
         contrastThreshold = 0.04
-        edgeThreshold = 5
-        sigma = 1.6
-        # sift = cv2.xfeatures2d.SIFT_create(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma)
-        sift = cv2.xfeatures2d.SIFT_create()
+        edgeThreshold = 20
+        sigma = 1.0
+        sift = cv2.xfeatures2d.SIFT_create(nfeatures, nOctaveLayers, contrastThreshold, edgeThreshold, sigma)
+        # sift = cv2.xfeatures2d.SIFT_create()
 
         # find the keypoints and descriptors with SIFT
         kp1, des1 = sift.detectAndCompute(img1,None)
