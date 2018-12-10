@@ -8,6 +8,28 @@ import regisProcessing as rp
 import FeatureMatch
 from matplotlib import pyplot as plt
 
+def multiplyImage(img1, img2):
+    # ! Change dtype to avoid overflow (unit8 -> int32)
+    img1 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+    img1 = img1.astype(np.int32)
+    img2 = img2.astype(np.int32)
+    out = cv2.multiply(img1, img2)
+    out = out/255.0
+    out = out.astype(np.uint8)
+    return out
+
+def show_plot(img1, img2, img3, inx):
+    save_name = "D:\Pai_work\pic_sonar\calPosition\plot_triple_match_" + str(inx) + ".jpg"
+    plt.subplot(221),plt.imshow(img1, cmap = 'gray')
+    plt.title('img1'), plt.xticks([]), plt.yticks([])
+    plt.subplot(222),plt.imshow(img2, cmap = 'gray')
+    plt.title('img2'), plt.xticks([]), plt.yticks([])
+    plt.subplot(223),plt.imshow(img3, cmap = 'gray')
+    plt.title('img3'), plt.xticks([]), plt.yticks([])
+    # plt.show()
+    plt.savefig(save_name)
+
 class block_image:
     def __init__(self, img1, img2, img3):
         self.blockImg1 = []
@@ -21,6 +43,9 @@ class block_image:
         # self.display(2)
         # self.display(3)
         self.matching(self.blockImg1, self.blockImg2, self.blockImg3, 5, 6)
+        print (self.row_match)
+        print (self.col_match)
+        self.draw_circle(img1, img2, img3)
 
     def create_block(self, img1, img2, img3, row, col):
         for i in range(0,row):
@@ -81,6 +106,8 @@ class block_image:
                         if x == xx and y == yy:
                             row_match.append((refPos1[inx_1][0] + (row*100), xx + (row*100), shiftPos2[inx_2][0] + (row*100)))
                             col_match.append((refPos1[inx_1][1] + (col*128), yy + (col*128), shiftPos2[inx_2][1] + (col*128)))
+                            self.row_match.append((refPos1[inx_1][0] + (row*100), xx + (row*100), shiftPos2[inx_2][0] + (row*100)))
+                            self.col_match.append((refPos1[inx_1][1] + (col*128), yy + (col*128), shiftPos2[inx_2][1] + (col*128)))
                             break
                         else:
                             inx_2 = inx_2 + 1
@@ -89,7 +116,25 @@ class block_image:
                     print ("block number : " + str(inx))
                     print (row_match)
                     print (col_match)
+                    
                 inx += 1
+
+    def draw_circle(self, img1, img2, img3):
+        # img_test = cv2.imread("D:\Pai_work\pic_sonar\RTheta_img_16.jpg")        
+        for i in range(len(self.row_match)):
+            rand_color = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
+            center_1 = (int(self.row_match[i][0]), int(self.col_match[i][0]))
+            center_2 = (int(self.row_match[i][1]), int(self.col_match[i][1]))
+            center_3 = (int(self.row_match[i][2]), int(self.col_match[i][2]))
+            cv2.circle(img1, center_1, 10, rand_color, -1)
+            cv2.circle(img2, center_2, 10, rand_color, -1)
+            cv2.circle(img3, center_3, 10, rand_color, -1)
+
+            cv2.imshow("cafar1", img1)
+            cv2.imshow("cafar2", img2)
+            cv2.imshow("cafar3", img3)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
 
 class positioning:
@@ -117,36 +162,45 @@ class positioning:
 
         kernel = np.ones((7,7),np.uint8)
         self.cfar_img1 = rp.cafar(self.image_1, 59, 11, 0.25)
-        self.cfar_img1 = cv2.morphologyEx(self.cfar_img1, cv2.MORPH_OPEN, kernel)
-        self.cfar_img2 = rp.cafar(self.image_2, 59, 11, 0.25)
-        self.cfar_img2 = cv2.morphologyEx(self.cfar_img2, cv2.MORPH_OPEN, kernel)
-        self.cfar_img3 = rp.cafar(self.image_3, 59, 11, 0.25)
-        self.cfar_img3 = cv2.morphologyEx(self.cfar_img3, cv2.MORPH_OPEN, kernel)
-        
-        # self.Full_matching()
-        # self.draw_circle()
+        self.cfar_img1 = cv2.erode(self.cfar_img1,kernel,iterations = 1)
+        self.cfar_img1 = cv2.dilate(self.cfar_img1,kernel,iterations = 3)
 
-        # self.read_dvl(inx_1)
-        # self.read_dvl(inx_2)
-        # self.read_dvl(inx_3)
-        # self.auv_position()
+        self.cfar_img2 = rp.cafar(self.image_2, 59, 11, 0.25)
+        self.cfar_img2 = cv2.erode(self.cfar_img2,kernel,iterations = 1)
+        self.cfar_img2 = cv2.dilate(self.cfar_img2,kernel,iterations = 3)
+
+        self.cfar_img3 = rp.cafar(self.image_3, 59, 11, 0.25)
+        self.cfar_img3 = cv2.erode(self.cfar_img3,kernel,iterations = 1)
+        self.cfar_img3 = cv2.dilate(self.cfar_img3,kernel,iterations = 3)
+
+        self.mul_img1 = multiplyImage(self.image_1, self.cfar_img1)
+        self.mul_img2 = multiplyImage(self.image_2, self.cfar_img2)
+        self.mul_img3 = multiplyImage(self.image_3, self.cfar_img3)
         
-        # self.distance_auv()
+        self.Full_matching()
+        self.draw_circle()
+
+        self.read_dvl(inx_1)
+        self.read_dvl(inx_2)
+        self.read_dvl(inx_3)
+        self.auv_position()
         
-        # for i in range(0,4):
-        #     self.solve(i)
-        # self.genarate_map(660,768)
+        self.distance_auv()
+        
+        for i in range(len(self.triple_Row)):
+            self.solve(i)
+        self.genarate_map(660,768)
 
     def Full_matching(self):
-        savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching1.jpg"
-        refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.image_1, self.image_2, savename)
-        savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching2.jpg"
-        refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.image_2, self.image_3, savename)
+        # savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching1.jpg"
+        # refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.image_1, self.image_2, savename)
+        # savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching2.jpg"
+        # refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.image_2, self.image_3, savename)
 
-        # savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching1.jpg"
-        # refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.cfar_img1, self.cfar_img2, savename)
-        # savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching2.jpg"
-        # refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.cfar_img2, self.cfar_img3, savename)
+        savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching1.jpg"
+        refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.mul_img1, self.mul_img2, savename)
+        savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching2.jpg"
+        refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.mul_img2, self.mul_img3, savename)
 
         inx_1 = 0
         for x,y in shiftPos1:
@@ -301,7 +355,8 @@ class positioning:
             
     
     def draw_circle(self):
-        # img_test = cv2.imread("D:\Pai_work\pic_sonar\RTheta_img_16.jpg")        
+        # img_test = cv2.imread("D:\Pai_work\pic_sonar\RTheta_img_16.jpg")
+        inx = 1        
         for i in range(len(self.triple_Row)):
             rand_color = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
             center_1 = (int(self.triple_Row[i][0]), int(self.triple_Col[i][0]))
@@ -311,11 +366,14 @@ class positioning:
             cv2.circle(self.image_2, center_2, 10, rand_color, -1)
             cv2.circle(self.image_3, center_3, 10, rand_color, -1)
 
-            cv2.imshow("cafar1", self.image_1)
-            cv2.imshow("cafar2", self.image_2)
-            cv2.imshow("cafar3", self.image_3)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            show_plot(self.image_1, self.image_2, self.image_3, inx)
+            inx += 1
+
+        # cv2.imshow("cafar1", self.image_1)
+        # cv2.imshow("cafar2", self.image_2)
+        # cv2.imshow("cafar3", self.image_3)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
 
     def update_map(self):
@@ -334,8 +392,12 @@ class positioning:
             # ! ++++++++++++++++++++ ! #
             center = (col_pos, row_pos)
             print (center)
-            cv2.circle(self.map_dis, center, 10, 60 * inx, -1)
+            cv2.circle(self.map_dis, center, 10, 200, -1)
             inx = inx + 1
+
+            cv2.imshow("res", self.map_dis)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
 if __name__ == '__main__':
 
@@ -344,6 +406,22 @@ if __name__ == '__main__':
     time_index3 = 15
 
     position = positioning(time_index1, time_index2, time_index3)
-    block_img = block_image(position.image_1, position.image_2, position.image_3)
+
+    # img1 = cv2.cvtColor(position.image_1, cv2.COLOR_BGR2GRAY)
+    # img2 = cv2.cvtColor(position.cfar_img1, cv2.COLOR_BGR2GRAY)
+
+    # res = multiplyImage(img1, img2)
+
+    # cv2.imshow("res", res)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    # plt.subplot(121),plt.imshow(position.image_1, cmap = 'gray')
+    # plt.title('img1'), plt.xticks([]), plt.yticks([])
+    # plt.subplot(122),plt.imshow(position.cfar_img1, cmap = 'gray')
+    # plt.title('img2'), plt.xticks([]), plt.yticks([])
+    # plt.show()
+
+    # block_img = block_image(position.image_1, position.image_2, position.image_3)
     # block_img.matching(block_img.blockImg1, block_img.blockImg2, block_img.blockImg3, 5, 6)
     
