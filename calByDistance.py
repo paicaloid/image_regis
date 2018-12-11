@@ -178,7 +178,7 @@ class positioning:
         self.mul_img3 = multiplyImage(self.image_3, self.cfar_img3)
         
         self.Full_matching()
-        self.draw_circle()
+        # self.draw_circle()
 
         self.read_dvl(inx_1)
         self.read_dvl(inx_2)
@@ -188,7 +188,8 @@ class positioning:
         self.distance_auv()
         
         for i in range(len(self.triple_Row)):
-            self.solve(i)
+            # self.solve(i)
+            self.solve_2(i)
         self.genarate_map(660,768)
 
     def Full_matching(self):
@@ -252,6 +253,27 @@ class positioning:
                 yPos = col_init + yPos
             # print (xPos, yPos)
             self.auv_pose.append((xPos, yPos))
+
+    def solve_2(self, numPoint):
+        d1 = np.power(self.auv_disList[numPoint][1][0], 2)
+        d2 = np.power(self.auv_disList[numPoint][1][1], 2)
+        d3 = np.power(self.auv_disList[numPoint][1][2], 2)
+
+        matrix_B = np.array([d1 - d2, d1 - d3])
+
+        rowA_1 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[1][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[1][1])]
+        rowA_2 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[2][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[2][1])]
+
+        matrix_A = np.array([rowA_1, rowA_2])
+
+        result = np.linalg.solve(matrix_A, matrix_B)
+
+        # print (matrix_A)
+        # print (matrix_B)
+        print (result[0], result[1])
+        
+        # self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
+        self.result_pose.append((int(result[0]), int(result[1])))
 
     def solve(self, numPoint):
         # d1 = np.power(self.distanceList[numPoint][1][0], 2)
@@ -395,9 +417,9 @@ class positioning:
             cv2.circle(self.map_dis, center, 10, 200, -1)
             inx = inx + 1
 
-            cv2.imshow("res", self.map_dis)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+            # cv2.imshow("res", self.map_dis)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
 
 if __name__ == '__main__':
 
