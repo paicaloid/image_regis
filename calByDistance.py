@@ -186,10 +186,12 @@ class positioning:
         self.auv_position()
         
         self.distance_auv()
+
+        # print (self.auv_disList)
         
         for i in range(len(self.triple_Row)):
-            # self.solve(i)
-            self.solve_2(i)
+            self.solve(i)
+        #     self.solve_2(i)
         self.genarate_map(660,768)
 
     def Full_matching(self):
@@ -276,20 +278,20 @@ class positioning:
         self.result_pose.append((int(result[0]), int(result[1])))
 
     def solve(self, numPoint):
-        # d1 = np.power(self.distanceList[numPoint][1][0], 2)
-        # d2 = np.power(self.distanceList[numPoint][1][1], 2)
-        # d3 = np.power(self.distanceList[numPoint][1][2], 2)
-
-        d1 = np.power(self.auv_disList[numPoint][1][0], 2)
-        d2 = np.power(self.auv_disList[numPoint][1][1], 2)
-        d3 = np.power(self.auv_disList[numPoint][1][2], 2)
-
-        matrix_B = np.array([d1 - d2, d1 - d3, d2 - d3])
-
         ### init Z (don't measure now)
         z1 = 2.0
         z2 = 2.5
         z3 = 2.3
+
+        # d1 = np.power(self.distanceList[numPoint][1][0], 2)
+        # d2 = np.power(self.distanceList[numPoint][1][1], 2)
+        # d3 = np.power(self.distanceList[numPoint][1][2], 2)
+
+        d1 = np.power(self.auv_disList[numPoint][1][0], 2) + np.power(z1, 2)
+        d2 = np.power(self.auv_disList[numPoint][1][1], 2) + np.power(z2, 2)
+        d3 = np.power(self.auv_disList[numPoint][1][2], 2) + np.power(z3, 2)
+
+        matrix_B = np.array([d1 - d2, d1 - d3, d2 - d3])
 
         rowA_1 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[1][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[1][1]), (-2)*(z1 - z2)]
         rowA_2 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[2][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[2][1]), (-2)*(z1 - z3)]
