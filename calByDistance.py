@@ -138,7 +138,7 @@ class block_image:
 
 
 class positioning:
-    def __init__(self, inx_1, inx_2, inx_3):
+    def __init__(self, inx_1, inx_2, inx_3, inx_4):
         self.image_perSec = 3.2
         self.imu_perSec = 99.2
         self.dvl_perSec = 6.6
@@ -149,50 +149,46 @@ class positioning:
         self.range_perPixel = 0.04343
         self.degree_perCol = 0.169
 
-        self.triple_Row = []
-        self.triple_Col = []
+        self.row_List = []
+        self.col_List = []
         self.matching_pose = []
 
         self.auv_state = []
         self.result_pose = []
 
-        self.image_1 = rp.ColorMultiLook(int(self.image_perSec * inx_1), 5)
-        self.image_2 = rp.ColorMultiLook(int(self.image_perSec * inx_2), 5)
-        self.image_3 = rp.ColorMultiLook(int(self.image_perSec * inx_3), 5)
+        # ! Delete after test triangulation
+        self.obj_pose = [(353,436), (334,495), (298,587), (218,661), (143,704)]
+
+        self.image = rp.ColorMultiLook(int(self.image_perSec * inx_1), 5)
 
         kernel = np.ones((7,7),np.uint8)
-        self.cfar_img1 = rp.cafar(self.image_1, 59, 11, 0.25)
-        self.cfar_img1 = cv2.erode(self.cfar_img1,kernel,iterations = 1)
-        self.cfar_img1 = cv2.dilate(self.cfar_img1,kernel,iterations = 3)
+        self.cfar_img = rp.cafar(self.image, 59, 11, 0.25)
+        self.cfar_img = cv2.erode(self.cfar_img,kernel,iterations = 1)
+        self.cfar_img = cv2.dilate(self.cfar_img,kernel,iterations = 3)
 
-        self.cfar_img2 = rp.cafar(self.image_2, 59, 11, 0.25)
-        self.cfar_img2 = cv2.erode(self.cfar_img2,kernel,iterations = 1)
-        self.cfar_img2 = cv2.dilate(self.cfar_img2,kernel,iterations = 3)
-
-        self.cfar_img3 = rp.cafar(self.image_3, 59, 11, 0.25)
-        self.cfar_img3 = cv2.erode(self.cfar_img3,kernel,iterations = 1)
-        self.cfar_img3 = cv2.dilate(self.cfar_img3,kernel,iterations = 3)
-
-        self.mul_img1 = multiplyImage(self.image_1, self.cfar_img1)
-        self.mul_img2 = multiplyImage(self.image_2, self.cfar_img2)
-        self.mul_img3 = multiplyImage(self.image_3, self.cfar_img3)
+        self.mul_img = multiplyImage(self.image, self.cfar_img)
         
-        self.Full_matching()
+        # self.Full_matching()
         # self.draw_circle()
 
         self.read_dvl(inx_1)
         self.read_dvl(inx_2)
         self.read_dvl(inx_3)
+        self.read_dvl(inx_4)
         self.auv_position()
         
+        print(self.auv_pose)
+
         self.distance_auv()
 
-        # print (self.auv_disList)
+        print (self.auv_disList)
+
+        self.solve_2()
         
-        for i in range(len(self.triple_Row)):
+        # for i in range(len(self.row_List)):
             # self.solve(i)
-            self.solve_2(i)
-        self.genarate_map(660,768)
+        #     self.solve_2(i)
+        # self.genarate_map(660,768)
 
     def Full_matching(self):
         savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching1.jpg"
@@ -210,14 +206,14 @@ class positioning:
             inx_2 = 0
             for xx,yy in refPos2:
                 if x == xx and y == yy:
-                    self.triple_Row.append((refPos1[inx_1][0], xx, shiftPos2[inx_2][0]))
-                    self.triple_Col.append((refPos1[inx_1][1], yy, shiftPos2[inx_2][1]))
+                    self.row_List.append((refPos1[inx_1][0], xx, shiftPos2[inx_2][0]))
+                    self.col_List.append((refPos1[inx_1][1], yy, shiftPos2[inx_2][1]))
                     break
                 else:
                     inx_2 = inx_2 + 1
             inx_1 = inx_1 + 1
-        print (self.triple_Row, self.triple_Col)
-        print (len(self.triple_Col))
+        print (self.row_List, self.col_List)
+        print (len(self.col_List))
 
     def read_dvl(self, sec):
         first_check = True
@@ -256,12 +252,14 @@ class positioning:
             # print (xPos, yPos)
             self.auv_pose.append((xPos, yPos))
 
-    def solve_2(self, numPoint):
-        d1 = np.power(self.auv_disList[numPoint][1][0], 2)
-        d2 = np.power(self.auv_disList[numPoint][1][1], 2)
-        d3 = np.power(self.auv_disList[numPoint][1][2], 2)
+    def solve_2(self):
+        d1 = self.auv_disList[0][1][0]
+        d2 = self.auv_disList[0][1][1]
+        d3 = self.auv_disList[0][1][2]
 
-        matrix_B = np.array([d3 - d1, d3 - d1])
+        b1 = d1 - d3 - np.power(self.auv_pose[0][0],2) - np.power(self.auv_pose[0][1],2) + np.power(self.auv_pose[2][0],2) + np.power(self.auv_pose[2][1],2)
+        b2 = d2 - d3 - np.power(self.auv_pose[1][0],2) - np.power(self.auv_pose[1][1],2) + np.power(self.auv_pose[2][0],2) + np.power(self.auv_pose[2][1],2)
+        matrix_B = np.array([b1, b2])
 
         rowA_1 = [2*(self.auv_pose[2][0]-self.auv_pose[0][0]), 2*(self.auv_pose[2][1]-self.auv_pose[0][1])]
         rowA_2 = [2*(self.auv_pose[2][0]-self.auv_pose[1][0]), 2*(self.auv_pose[2][1]-self.auv_pose[1][1])]
@@ -270,12 +268,10 @@ class positioning:
 
         result = np.linalg.solve(matrix_A, matrix_B)
 
-        # print (matrix_A)
-        # print (matrix_B)
         print (result[0], result[1])
-        
-        # self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
-        self.result_pose.append((int(result[0]), int(result[1])))
+        print (self.obj_pose[0])
+        # # self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
+        # self.result_pose.append((int(result[0]), int(result[1])))
 
     def solve(self, numPoint):
         ### init Z (don't measure now)
@@ -313,11 +309,11 @@ class positioning:
         auv_colPos = 384 
 
         self.distanceList = []
-        for i in range(len(self.triple_Row)):
+        for i in range(len(self.row_List)):
             disList = []
             for j in range(0,3):
-                diff_row = self.triple_Row[i][j] - auv_rowPos
-                diff_col = self.triple_Col[i][j] - auv_colPos
+                diff_row = self.row_List[i][j] - auv_rowPos
+                diff_col = self.col_List[i][j] - auv_colPos
                 diff_row = np.power(diff_row, 2)
                 diff_col = np.power(diff_col, 2)
                 dis = diff_row + diff_col
@@ -327,18 +323,29 @@ class positioning:
         
     def distance_auv(self):
         self.auv_disList = []
-        for i in range(len(self.triple_Row)):
+        # for i in range(len(self.row_List)):
+        #     disList = []
+        #     for j in range(0,3):
+        #         diff_row = self.row_List[i][j] - self.auv_pose[j][0]
+        #         diff_col = self.col_List[i][j] - self.auv_pose[j][1]
+        #         diff_row = np.power(diff_row, 2)
+        #         diff_col = np.power(diff_col, 2)
+        #         dis = diff_row + diff_col
+        #         dis = np.sqrt(dis)
+        #         disList.append(dis)
+        #     self.auv_disList.append(("Point : " + str(i),disList))
+        inx = 1
+        for obj in self.obj_pose:
             disList = []
-            for j in range(0,3):
-                diff_row = self.triple_Row[i][j] - self.auv_pose[j][0]
-                diff_col = self.triple_Col[i][j] - self.auv_pose[j][1]
+            for pose in self.auv_pose:
+                diff_row = obj[0] - pose[0]
+                diff_col = obj[1] - pose[1]
                 diff_row = np.power(diff_row, 2)
                 diff_col = np.power(diff_col, 2)
                 dis = diff_row + diff_col
-                dis = np.sqrt(dis)
                 disList.append(dis)
-            self.auv_disList.append(("Point : " + str(i),disList))
-
+            self.auv_disList.append(("object : " + str(inx),disList))
+            inx +=1
     def genarate_map(self, row_map, col_map):
         self.map_auv = np.zeros((row_map, col_map),np.uint8)
         self.map_obj = np.zeros((row_map, col_map),np.uint8)
@@ -347,10 +354,10 @@ class positioning:
         for auv in self.auv_pose:
             cv2.circle(self.map_auv, (int(auv[1]),int(auv[0])), 10, 255, -1)
 
-        for i in range(len(self.triple_Row)):
-            center_1 = (int(self.triple_Row[i][0]), int(self.triple_Col[i][0]))
-            center_2 = (int(self.triple_Row[i][1]), int(self.triple_Col[i][1]))
-            center_3 = (int(self.triple_Row[i][2]), int(self.triple_Col[i][2]))
+        for i in range(len(self.row_List)):
+            center_1 = (int(self.row_List[i][0]), int(self.col_List[i][0]))
+            center_2 = (int(self.row_List[i][1]), int(self.col_List[i][1]))
+            center_3 = (int(self.row_List[i][2]), int(self.col_List[i][2]))
             cv2.circle(self.map_obj, center_1, 5, 85, -1)
             cv2.circle(self.map_obj, center_2, 5, 170, -1)
             cv2.circle(self.map_obj, center_3, 5, 255, -1)
@@ -368,10 +375,10 @@ class positioning:
         end_1 = (int(self.auv_pose[0][1]), int(self.auv_pose[0][0]))
         end_2 = (int(self.auv_pose[1][1]), int(self.auv_pose[1][0]))
         end_3 = (int(self.auv_pose[2][1]), int(self.auv_pose[2][0]))
-        for i in range(len(self.triple_Row)):
-            start_1 = (int(self.triple_Row[i][0]), int(self.triple_Col[i][0]))
-            start_2 = (int(self.triple_Row[i][1]), int(self.triple_Col[i][1]))
-            start_3 = (int(self.triple_Row[i][2]), int(self.triple_Col[i][2]))
+        for i in range(len(self.row_List)):
+            start_1 = (int(self.row_List[i][0]), int(self.col_List[i][0]))
+            start_2 = (int(self.row_List[i][1]), int(self.col_List[i][1]))
+            start_3 = (int(self.row_List[i][2]), int(self.col_List[i][2]))
 
             cv2.line(self.map_dis, start_1, end_1, 255, 1)
             cv2.line(self.map_dis, start_2, end_2, 255, 1)
@@ -381,11 +388,11 @@ class positioning:
     def draw_circle(self):
         # img_test = cv2.imread("D:\Pai_work\pic_sonar\RTheta_img_16.jpg")
         inx = 1        
-        for i in range(len(self.triple_Row)):
+        for i in range(len(self.row_List)):
             rand_color = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
-            center_1 = (int(self.triple_Row[i][0]), int(self.triple_Col[i][0]))
-            center_2 = (int(self.triple_Row[i][1]), int(self.triple_Col[i][1]))
-            center_3 = (int(self.triple_Row[i][2]), int(self.triple_Col[i][2]))
+            center_1 = (int(self.row_List[i][0]), int(self.col_List[i][0]))
+            center_2 = (int(self.row_List[i][1]), int(self.col_List[i][1]))
+            center_3 = (int(self.row_List[i][2]), int(self.col_List[i][2]))
             cv2.circle(self.image_1, center_1, 10, rand_color, -1)
             cv2.circle(self.image_2, center_2, 10, rand_color, -1)
             cv2.circle(self.image_3, center_3, 10, rand_color, -1)
@@ -428,24 +435,16 @@ if __name__ == '__main__':
     time_index1 = 5
     time_index2 = 10
     time_index3 = 15
+    time_index4 = 20
 
-    position = positioning(time_index1, time_index2, time_index3)
+    position = positioning(time_index1, time_index2, time_index3, time_index4)
 
     # img1 = cv2.cvtColor(position.image_1, cv2.COLOR_BGR2GRAY)
     # img2 = cv2.cvtColor(position.cfar_img1, cv2.COLOR_BGR2GRAY)
 
     # res = multiplyImage(img1, img2)
 
-    # cv2.imshow("res", res)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-    # plt.subplot(121),plt.imshow(position.image_1, cmap = 'gray')
-    # plt.title('img1'), plt.xticks([]), plt.yticks([])
-    # plt.subplot(122),plt.imshow(position.cfar_img1, cmap = 'gray')
-    # plt.title('img2'), plt.xticks([]), plt.yticks([])
-    # plt.show()
-
-    # block_img = block_image(position.image_1, position.image_2, position.image_3)
-    # block_img.matching(block_img.blockImg1, block_img.blockImg2, block_img.blockImg3, 5, 6)
+    cv2.imshow("res", position.mul_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     
