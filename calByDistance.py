@@ -190,20 +190,20 @@ class positioning:
         # print (self.auv_disList)
         
         for i in range(len(self.triple_Row)):
-            self.solve(i)
-        #     self.solve_2(i)
+            # self.solve(i)
+            self.solve_2(i)
         self.genarate_map(660,768)
 
     def Full_matching(self):
-        # savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching1.jpg"
-        # refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.image_1, self.image_2, savename)
-        # savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching2.jpg"
-        # refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.image_2, self.image_3, savename)
+        savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching1.jpg"
+        refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.image_1, self.image_2, savename)
+        savename = "D:\Pai_work\pic_sonar\calPosition\Full_Matching2.jpg"
+        refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.image_2, self.image_3, savename)
 
-        savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching1.jpg"
-        refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.mul_img1, self.mul_img2, savename)
-        savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching2.jpg"
-        refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.mul_img2, self.mul_img3, savename)
+        # savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching1.jpg"
+        # refPos1, shiftPos1 = FeatureMatch.matchPosition_BF(self.mul_img1, self.mul_img2, savename)
+        # savename = "D:\Pai_work\pic_sonar\calPosition\cafar_Matching2.jpg"
+        # refPos2, shiftPos2 = FeatureMatch.matchPosition_BF(self.mul_img2, self.mul_img3, savename)
 
         inx_1 = 0
         for x,y in shiftPos1:
@@ -261,10 +261,10 @@ class positioning:
         d2 = np.power(self.auv_disList[numPoint][1][1], 2)
         d3 = np.power(self.auv_disList[numPoint][1][2], 2)
 
-        matrix_B = np.array([d1 - d2, d1 - d3])
+        matrix_B = np.array([d3 - d1, d3 - d1])
 
-        rowA_1 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[1][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[1][1])]
-        rowA_2 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[2][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[2][1])]
+        rowA_1 = [2*(self.auv_pose[2][0]-self.auv_pose[0][0]), 2*(self.auv_pose[2][1]-self.auv_pose[0][1])]
+        rowA_2 = [2*(self.auv_pose[2][0]-self.auv_pose[1][0]), 2*(self.auv_pose[2][1]-self.auv_pose[1][1])]
 
         matrix_A = np.array([rowA_1, rowA_2])
 
