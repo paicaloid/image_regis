@@ -44,6 +44,8 @@ def matchPosition_BF(img1, img2, savename):
         img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,good,None,flags=2)
         if savename != "0":
             plt.imshow(img3),plt.savefig(savename)
+        elif savename == "0":
+            plt.imshow(img3),plt.show()
         return ref_Position, shift_Position
     except:
         return ref_Position, shift_Position
