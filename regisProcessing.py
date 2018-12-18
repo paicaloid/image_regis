@@ -189,8 +189,8 @@ def linear_Approx(x_in, y_in, x_out, y_out):
     listA = np.linalg.lstsq(vectorA, x_out)[0]
 
     ## rewrite the line equation as y = Aq
-    ## where B = [[1 x y x^2 y^2 xy]] 
-    ## and q = [b0, b1, b2, b3, b4, b5]
+    ## where B = [[1 x y]] 
+    ## and q = [b0, b1, b2]
     listB = np.linalg.lstsq(vectorA, y_out)[0]
 
     # ! Check error
