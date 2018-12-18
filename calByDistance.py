@@ -138,7 +138,7 @@ class block_image:
 
 
 class positioning:
-    def __init__(self, inx_1, inx_2, inx_3, inx_4):
+    def __init__(self, inx_1, inx_2, inx_3, inx_4, inx_5):
         self.image_perSec = 3.2
         self.imu_perSec = 99.2
         self.dvl_perSec = 6.6
@@ -175,19 +175,23 @@ class positioning:
         self.read_dvl(inx_2)
         self.read_dvl(inx_3)
         self.read_dvl(inx_4)
+        self.read_dvl(inx_5)
         self.auv_position()
         
-        print(self.auv_pose)
+        # print(self.auv_pose)
 
         self.distance_auv()
 
-        print (self.auv_disList)
+        # print (self.auv_disList)
 
-        self.solve_2()
+        # self.solve_2()
+        # self.solve()
         
-        # for i in range(len(self.row_List)):
-            # self.solve(i)
+        for i in range(len(self.obj_pose)):
+            self.solve(i)
+            # self.extra_solve(i)
         #     self.solve_2(i)
+            print ("++++++++++++++++")
         # self.genarate_map(660,768)
 
     def Full_matching(self):
@@ -273,36 +277,83 @@ class positioning:
         # # self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
         # self.result_pose.append((int(result[0]), int(result[1])))
 
-    def solve(self, numPoint):
-        ### init Z (don't measure now)
-        z1 = 2.0
+    def extra_solve(self, num):
+        z1 = 2.75
         z2 = 2.5
-        z3 = 2.3
+        z3 = 2.6
+        z4 = 2.3
+        z5 = 2.8
 
-        # d1 = np.power(self.distanceList[numPoint][1][0], 2)
-        # d2 = np.power(self.distanceList[numPoint][1][1], 2)
-        # d3 = np.power(self.distanceList[numPoint][1][2], 2)
+        d1 = self.auv_disList[num][1][0] + np.power(z1, 2)
+        d2 = self.auv_disList[num][1][1] + np.power(z2, 2)
+        d3 = self.auv_disList[num][1][2] + np.power(z3, 2)
+        d4 = self.auv_disList[num][1][3] + np.power(z4, 2)
+        d5 = self.auv_disList[num][1][4] + np.power(z5, 2)
 
-        d1 = np.power(self.auv_disList[numPoint][1][0], 2) + np.power(z1, 2)
-        d2 = np.power(self.auv_disList[numPoint][1][1], 2) + np.power(z2, 2)
-        d3 = np.power(self.auv_disList[numPoint][1][2], 2) + np.power(z3, 2)
+        b1 = d1 - d4 - np.power(self.auv_pose[0][0],2) - np.power(self.auv_pose[0][1],2) - np.power(z1, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
+        b2 = d2 - d4 - np.power(self.auv_pose[1][0],2) - np.power(self.auv_pose[1][1],2) - np.power(z2, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
+        b3 = d3 - d4 - np.power(self.auv_pose[2][0],2) - np.power(self.auv_pose[2][1],2) - np.power(z3, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
+        b5 = d5 - d4 - np.power(self.auv_pose[4][0],2) - np.power(self.auv_pose[4][1],2) - np.power(z5, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
 
-        matrix_B = np.array([d1 - d2, d1 - d3, d2 - d3])
+        matrix_B = np.array([[b1], [b2], [b3], [b5]])
 
-        rowA_1 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[1][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[1][1]), (-2)*(z1 - z2)]
-        rowA_2 = [(-2)*(self.auv_pose[0][0] - self.auv_pose[2][0]), (-2)*(self.auv_pose[0][1] - self.auv_pose[2][1]), (-2)*(z1 - z3)]
-        rowA_3 = [(-2)*(self.auv_pose[1][0] - self.auv_pose[2][0]), (-2)*(self.auv_pose[1][1] - self.auv_pose[2][1]), (-2)*(z1 - z3)]
+        rowA_1 = [2*(self.auv_pose[3][0]-self.auv_pose[0][0]), 2*(self.auv_pose[3][1]-self.auv_pose[0][1]), 2*(z4 - z1)]
+        rowA_2 = [2*(self.auv_pose[3][0]-self.auv_pose[1][0]), 2*(self.auv_pose[3][1]-self.auv_pose[1][1]), 2*(z4 - z2)]
+        rowA_3 = [2*(self.auv_pose[3][0]-self.auv_pose[2][0]), 2*(self.auv_pose[3][1]-self.auv_pose[2][1]), 2*(z4 - z3)]
+        rowA_5 = [2*(self.auv_pose[3][0]-self.auv_pose[4][0]), 2*(self.auv_pose[3][1]-self.auv_pose[4][1]), 2*(z4 - z5)]
+
+        matrix_A = np.array([rowA_1, rowA_2, rowA_3, rowA_5])
+
+        # result = np.linalg.solve(matrix_A, matrix_B)
+        # result = np.linalg.lstsq(matrix_A, matrix_B)[0]
+        # print (result)
+
+        out = np.matmul(np.transpose(matrix_A), matrix_A)
+        out = np.matmul(np.linalg.inv(out), np.transpose(matrix_A))
+        out = np.matmul(out, matrix_B)
+
+        print (out)
+
+    def solve(self, num):
+        ### init Z (don't measure now)
+        z1 = 200.75 / self.range_perPixel
+        z2 = 200.5 / self.range_perPixel
+        z3 = 200.8 / self.range_perPixel
+        z4 = 200.3 / self.range_perPixel
+
+        d1 = self.auv_disList[num][1][0] + np.power(z1, 2)
+        d2 = self.auv_disList[num][1][1] + np.power(z2, 2)
+        d3 = self.auv_disList[num][1][2] + np.power(z3, 2)
+        d4 = self.auv_disList[num][1][3] + np.power(z4, 2)
+
+        b1 = d1 - d4 - np.power(self.auv_pose[0][0],2) - np.power(self.auv_pose[0][1],2) - np.power(z1, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
+        b2 = d2 - d4 - np.power(self.auv_pose[1][0],2) - np.power(self.auv_pose[1][1],2) - np.power(z2, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
+        b3 = d3 - d4 - np.power(self.auv_pose[2][0],2) - np.power(self.auv_pose[2][1],2) - np.power(z3, 2) + np.power(self.auv_pose[3][0],2) + np.power(self.auv_pose[3][1],2) + np.power(z4, 2)
+
+        matrix_B = np.array([[b1], [b2], [b3]])
+
+        rowA_1 = [2*(self.auv_pose[3][0]-self.auv_pose[0][0]), 2*(self.auv_pose[3][1]-self.auv_pose[0][1]), 2*(z4 - z1)]
+        rowA_2 = [2*(self.auv_pose[3][0]-self.auv_pose[1][0]), 2*(self.auv_pose[3][1]-self.auv_pose[1][1]), 2*(z4 - z2)]
+        rowA_3 = [2*(self.auv_pose[3][0]-self.auv_pose[2][0]), 2*(self.auv_pose[3][1]-self.auv_pose[2][1]), 2*(z4 - z3)]
 
         matrix_A = np.array([rowA_1, rowA_2, rowA_3])
 
         result = np.linalg.solve(matrix_A, matrix_B)
 
-        # print (matrix_A)
-        # print (matrix_B)
-        print (result[0], result[1], result[2])
+        # print (matrix_A.shape)
+        # print (matrix_B.shape)
+        # print (result[0], result[1], result[2])
         
         # self.result_pose.append((np.abs(int(result[0])), np.abs(int(result[1])), np.abs(int(result[2]))))
         self.result_pose.append((int(result[0]), int(result[1]), int(result[2])))
+
+        # out = (np.linalg.inv(np.transpose(matrix_A)*matrix_A) * np.transpose(matrix_A) * matrix_B)[0]
+        out = np.matmul(np.transpose(matrix_A), matrix_A)
+        out = np.matmul(np.linalg.inv(out), np.transpose(matrix_A))
+        out = np.matmul(out, matrix_B)
+        # out = np.matmul((np.linalg.inv(np.transpose(matrix_A)*matrix_A) ,B)
+        print (out[0], out[1], out[2])
+        # print (out)
 
     def distance(self):
         auv_rowPos = 660
@@ -323,17 +374,6 @@ class positioning:
         
     def distance_auv(self):
         self.auv_disList = []
-        # for i in range(len(self.row_List)):
-        #     disList = []
-        #     for j in range(0,3):
-        #         diff_row = self.row_List[i][j] - self.auv_pose[j][0]
-        #         diff_col = self.col_List[i][j] - self.auv_pose[j][1]
-        #         diff_row = np.power(diff_row, 2)
-        #         diff_col = np.power(diff_col, 2)
-        #         dis = diff_row + diff_col
-        #         dis = np.sqrt(dis)
-        #         disList.append(dis)
-        #     self.auv_disList.append(("Point : " + str(i),disList))
         inx = 1
         for obj in self.obj_pose:
             disList = []
@@ -436,15 +476,17 @@ if __name__ == '__main__':
     time_index2 = 10
     time_index3 = 15
     time_index4 = 20
-
-    position = positioning(time_index1, time_index2, time_index3, time_index4)
+    time_index5 = 25
+    position = positioning(time_index1, time_index2, time_index3, time_index4, time_index5)
 
     # img1 = cv2.cvtColor(position.image_1, cv2.COLOR_BGR2GRAY)
     # img2 = cv2.cvtColor(position.cfar_img1, cv2.COLOR_BGR2GRAY)
 
     # res = multiplyImage(img1, img2)
+    # ref = rp.AverageMultiLook(10,1)
+    # img = rp.AverageMultiLook(10,10)
 
-    cv2.imshow("res", position.mul_img)
+    cv2.imshow("img", position.cfar_img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     
