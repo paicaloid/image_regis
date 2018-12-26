@@ -26,28 +26,29 @@ def coefShift(img1, img2, num):
     rowRange = colRange * (-1)
     rowList = []
     coefList = []
+    row, col = img1.shape
     for rowInx in rowRange:
         colList = []
         for colInx in colRange:
             trans_matrix = np.float32([[1,0,colInx],[0,1,rowInx]])
-            imgShift = cv2.warpAffine(img2, trans_matrix, (768,500))
+            imgShift = cv2.warpAffine(img2, trans_matrix, (col,row))
 
             # ! Quadrant 1
             if rowInx > 0 and colInx > 0:
-                imgRef = img1[rowInx:500, colInx:768]
-                imgShift = imgShift[rowInx:500, colInx:768]
+                imgRef = img1[rowInx:row, colInx:col]
+                imgShift = imgShift[rowInx:row, colInx:col]
             # ! Quadrant 2
             elif rowInx > 0 and colInx < 0:
-                imgRef = img1[rowInx:500, 0:768+colInx]
-                imgShift = imgShift[rowInx:500, 0:768+colInx]
+                imgRef = img1[rowInx:row, 0:col+colInx]
+                imgShift = imgShift[rowInx:row, 0:col+colInx]
             # ! Quadrant 3
             elif rowInx < 0 and colInx < 0:
-                imgRef = img1[0:500+rowInx, 0:768+colInx]
-                imgShift = imgShift[0:500+rowInx, 0:768+colInx]
+                imgRef = img1[0:row+rowInx, 0:col+colInx]
+                imgShift = imgShift[0:row+rowInx, 0:col+colInx]
             # ! Quadrant 4
             elif rowInx < 0 and colInx > 0:
-                imgRef = img1[0:500+rowInx, colInx:768]
-                imgShift = imgShift[0:500+rowInx, colInx:768]
+                imgRef = img1[0:row+rowInx, colInx:col]
+                imgShift = imgShift[0:row+rowInx, colInx:col]
             
             coef = cv2.matchTemplate(imgRef, imgShift, cv2.TM_CCOEFF_NORMED)
             colList.append(coef[0][0])
@@ -61,6 +62,7 @@ def coefShift(img1, img2, num):
 
 def matchingPair(img1, img2):
     refPos, shiftPos = FeatureMatch.matchPosition_BF(img1, img2, "0")
+    # refPos, shiftPos = FeatureMatch.FLANN_saveMatching(img1, img2, "0")
     
     input_row = []
     input_col = []
@@ -101,10 +103,29 @@ def linear_approx(in_row, in_col, out_row, out_col):
 
     return rowList, colList
 
+def polynomial_approx(in_row, in_col, out_row, out_col):
+    rowPow_in = np.power(in_row, 2)
+    colPow_in = np.power(in_col, 2)
+    row_col = np.asarray(in_row) * np.asarray(in_col)
+    row_col = row_col.tolist()
+
+    ## rewrite the line equation as x = Ap
+    ## where A = [[1 x y x^2 y^2 xy]] 
+    ## and p = [a0, a1, a2, a3, a4, a5]
+    vectorA = np.vstack([np.ones(len(in_row)), in_row, in_col, rowPow_in, colPow_in, row_col]).T
+    listA = np.linalg.lstsq(vectorA, out_row)[0]
+    
+    ## rewrite the line equation as y = Aq
+    ## where B = [[1 x y x^2 y^2 xy]] 
+    ## and q = [b0, b1, b2, b3, b4, b5]
+    listB = np.linalg.lstsq(vectorA, out_col)[0]
+
+    return listA, listB
+
 def remap_linear(img, list_row, list_col):
     row, col = np.mgrid[:img.shape[0],:img.shape[1]]
-    print (row)
-    print (col)
+    # print (row)
+    # print (col)
     new_row = list_row[0] + (list_row[1]*row) + (list_row[2]*col)
     new_col = list_col[0] + (list_col[1]*row) + (list_col[2]*col)
 
@@ -114,9 +135,45 @@ def remap_linear(img, list_row, list_col):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+    return res
+
+def remap_poly(img, list_row, list_col):
+    row, col = np.mgrid[:img.shape[0],:img.shape[1]]
+    new_x = list_row[0] + (list_row[1]*row) + (list_row[2]*col) + (list_row[3]*np.power(row,2)) + (list_row[4]*np.power(col,2)) + (list_row[5]*row*col)
+    new_y = list_col[0] + (list_col[1]*row) + (list_col[2]*col) + (list_col[3]*np.power(row,2)) + (list_col[4]*np.power(col,2)) + (list_col[5]*row*col)
+
+    res = cv2.remap(img,new_x.astype('float32'),new_y.astype('float32'),cv2.INTER_LINEAR)
+
+    cv2.imshow("Img", res)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    return res
+
+def draw_matching(img1, img2, rowOut, colOut, rowIn, colIn, inx):
+    img = np.hstack((img1, img1))
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    row, col = img1.shape
+    for i in inx:
+        rand_color = (random.randint(0,256), random.randint(0,256), random.randint(0,256))
+        # center_1 = (int(rowOut[i]), int(colOut[i]))
+        # center_2 = (int(rowIn[i]), int(colIn[i] + col))
+        center_1 = (int(colOut[i]), int(rowOut[i]))
+        center_2 = (int(colIn[i] + col), int(rowIn[i]))
+        cv2.circle(img, center_1, 5, rand_color, -1)
+        cv2.circle(img, center_2, 5, rand_color, -1)
+        cv2.line(img, center_1, center_2, rand_color, 1)
+    cv2.imshow("match image", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
 if __name__ == '__main__':
     img1 = rp.AverageMultiLook(10,1)
-    img2 = rp.AverageMultiLook(20,1)
+    img1 = img1[0:500, 0+5:768-5]
+    img2 = rp.AverageMultiLook(13,1)
+    img2 = img2[0:500, 0+5:768-5]
+
+    print (img1.shape)
 
     kernel = np.ones((7,7),np.uint8)
     cfar1 = rp.cafar(img1, 59, 11, 0.25)
@@ -129,39 +186,75 @@ if __name__ == '__main__':
     cfar2 = cv2.dilate(cfar2, kernel, iterations = 3)
     mul_2 = multiplyImage(img2, cfar2)
 
-
-    # ! Finish run : [-14, -1]
-    # coefShift(img1, img2, 15)
-    ref_dis = np.power(-14,2) + np.power(-1,2)
+    # ! Finish run : [-4, 0]
+    # coefShift(img1, img2, 10)
+    # ref_dis = np.power(-14,2) + np.power(-1,2)
     # print (ref_dis)
     # coef_remap(img2)
 
-    # input_row, input_col, output_row, output_col = matchingPair(img2, img1)
-    input_row, input_col, output_row, output_col = matchingPair(mul_2, mul_1)
-
-    paramRow, paramCol = linear_approx(input_row, input_col, output_row, output_col)
-
-    remap_linear(img2, paramRow, paramCol)
+    output_row, output_col, input_row, input_col = matchingPair(img1, img2)
+    # input_row, input_col, output_row, output_col = matchingPair(mul_2, mul_1)
 
     r_list = []
-    xPos = []
-    yPos = []
-    xOut = []
-    yOut = []
+    rowIn = []
+    colIn = []
+    rowOut = []
+    colOut = []
 
     for i in range(0,len(input_row)):
         row_diff = input_row[i] - output_row[i]
         col_diff = input_col[i] - output_col[i]
         dis = np.power(row_diff,2) + np.power(col_diff,2)
         r_list.append(dis)
-        if np.abs(row_diff) < 24 and np.abs(row_diff) > 4:
-            xPos.append(input_row[i])
-            yPos.append(input_col[i])
-            xOut.append(output_row[i])
-            yOut.append(output_col[i])
-
-    paramRow, paramCol = linear_approx(xPos, yPos, xOut, yOut)
-
-    remap_linear(img2, paramRow, paramCol)
-
     
+    dis_mean = np.mean(r_list)
+    dis_med = np.median(r_list)
+    print (dis_mean, dis_med)
+    dis_index = []
+    for i in range(len(r_list)):
+        if r_list[i] < dis_med:
+            dis_index.append(i)
+    print (dis_index)
+
+    for i in dis_index:
+        rowIn.append(input_row[i])
+        colIn.append(input_col[i])
+        rowOut.append(output_row[i])
+        colOut.append(output_col[i])
+    
+    draw_matching(img1, img2, output_row, output_col, input_row, input_col, dis_index)
+
+    paramRow, paramCol = linear_approx(input_row, input_col, output_row, output_col)
+    print (len(paramRow))
+    img_remap =  remap_linear(img2, paramRow, paramCol)
+
+    paramRow, paramCol = linear_approx(rowIn, colIn, rowOut, colOut)
+    img_remap_upgrade =  remap_linear(img2, paramRow, paramCol)
+
+    paramRow, paramCol = polynomial_approx(input_row, input_col, output_row, output_col)
+    print (len(paramRow))
+    img_poly = remap_poly(img2, paramRow, paramCol)
+
+    paramRow, paramCol = polynomial_approx(rowIn, colIn, rowOut, colOut)
+    img_poly_upgrade = remap_poly(img2, paramRow, paramCol)
+
+    if True:
+        coef = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
+        print ("No remap : " + str(coef[0][0]))
+        coef = cv2.matchTemplate(img1, img_remap, cv2.TM_CCOEFF_NORMED)
+        print ("Linear approx : " + str(coef[0][0]))
+        coef = cv2.matchTemplate(img1, img_remap_upgrade, cv2.TM_CCOEFF_NORMED)
+        print ("Linear approx reduce : " + str(coef[0][0]))
+        coef = cv2.matchTemplate(img1, img_poly, cv2.TM_CCOEFF_NORMED)
+        print ("Poly approx reduce : " + str(coef[0][0]))
+        coef = cv2.matchTemplate(img1, img_poly_upgrade, cv2.TM_CCOEFF_NORMED)
+        print ("Poly approx reduce : " + str(coef[0][0]))
+
+        row, col = img1.shape
+        trans_matrix = np.float32([[1,0,0],[0,1,-4]])
+        imgShift = cv2.warpAffine(img2, trans_matrix, (col,row))
+        img1 = img1[0:row-4,0:col]
+        imgShift = imgShift[0:row-4,0:col]
+
+        coef = cv2.matchTemplate(img1, imgShift, cv2.TM_CCOEFF_NORMED)
+        print ("Coef shift : " + str(coef[0][0]))
