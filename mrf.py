@@ -167,6 +167,47 @@ def draw_matching(img1, img2, rowOut, colOut, rowIn, colIn, inx):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def dvl_all(sec):
+    first_check = True
+    xPos = []
+    yPos = []
+    zPos = []
+    auv_state = []
+    time = 0
+    position_x = 0
+    position_y = 0
+    position_z = 0
+    with open('recordDVL.csv') as csv_file:
+        reader = csv.reader(csv_file, delimiter=',')
+        for data in reader:
+            if first_check:
+                first_check = False
+                init_time = int(data[2][0:10])
+            else:
+                if (init_time + time == int(data[2][0:10])):
+                    xPos.append(float(data[3]))
+                    yPos.append(float(data[4]))
+                    zPos.append(float(data[5]))
+                elif (init_time + time + 1 == int(data[2][0:10])):
+                    time += 1
+                    x_speed = np.mean(xPos)
+                    y_speed = np.mean(yPos)
+                    z_speed = np.mean(zPos)
+                    position_x = (x_speed * time) + position_x
+                    position_y = (y_speed * time) + position_y
+                    position_z = (z_speed * time) + position_z
+                    auv_state.append((time, position_x, position_y, position_z))
+                    xPos = []
+                    yPos = []
+                    zPos = []
+                    xPos.append(float(data[3]))
+                    yPos.append(float(data[4]))
+                    zPos.append(float(data[5]))
+                    if (time == sec):
+                        break
+        
+        return auv_state
+
 def read_dvl(sec):
     first_check = True
     xPos = []
@@ -218,21 +259,25 @@ if __name__ == '__main__':
     image_perSec = 3.2
     degree_perCol = 0.169
 
-    print (int(3 * image_perSec))
-    print (int(4 * image_perSec))
+    # print (int(3 * image_perSec))
+    # print (int(4 * image_perSec))
 
     auv_state_1 = read_dvl(3)
     auv_state_2 = read_dvl(4)
 
     row_shift = np.abs(auv_state_1[0][1] - auv_state_2[0][1]) / range_perPixel
     col_shift = np.abs(auv_state_1[0][2] - auv_state_2[0][2]) / degree_perCol
-    print (row_shift)
-    print (col_shift)
+    # print (row_shift)
+    # print (col_shift)
 
     # print (auv_state_1)
     # print (auv_state_2)
 
-    if True:
+    pos = dvl_all(5)
+
+    print (pos)
+
+    if False:
         output_row, output_col, input_row, input_col = matchingPair(img1, img2)
         # input_row, input_col, output_row, output_col = matchingPair(mul_2, mul_1)
 
@@ -279,7 +324,7 @@ if __name__ == '__main__':
         paramRow, paramCol = polynomial_approx(rowIn, colIn, rowOut, colOut)
         img_poly_upgrade = remap_poly(img2, paramRow, paramCol)
 
-    if True:
+    if False:
         coef = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
         print ("No remap : " + str(coef[0][0]))
         coef = cv2.matchTemplate(img1, img_remap, cv2.TM_CCOEFF_NORMED)
