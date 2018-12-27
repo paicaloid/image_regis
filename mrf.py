@@ -167,10 +167,32 @@ def draw_matching(img1, img2, rowOut, colOut, rowIn, colIn, inx):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
+def read_dvl(sec):
+    first_check = True
+    xPos = []
+    yPos = []
+    zPos = []
+    auv_state = []
+    with open('recordDVL.csv') as csv_file:
+        reader = csv.reader(csv_file, delimiter=',')
+        for data in reader:
+            if first_check:
+                first_check = False
+                init_time = int(data[2][0:10])
+            else:
+                if (init_time + sec == int(data[2][0:10])):
+                    xPos.append(float(data[3]))
+                    yPos.append(float(data[4]))
+                    zPos.append(float(data[5]))
+                elif (init_time + sec < int(data[2][0:10])):
+                    auv_state.append((init_time + sec, np.mean(xPos) * sec, np.mean(yPos) * sec, np.mean(zPos) * sec))
+                    break
+        return auv_state
+
 if __name__ == '__main__':
-    img1 = rp.AverageMultiLook(10,1)
+    img1 = rp.AverageMultiLook(9,1)
     img1 = img1[0:500, 0+5:768-5]
-    img2 = rp.AverageMultiLook(13,1)
+    img2 = rp.AverageMultiLook(12,1)
     img2 = img2[0:500, 0+5:768-5]
 
     print (img1.shape)
@@ -192,51 +214,70 @@ if __name__ == '__main__':
     # print (ref_dis)
     # coef_remap(img2)
 
-    output_row, output_col, input_row, input_col = matchingPair(img1, img2)
-    # input_row, input_col, output_row, output_col = matchingPair(mul_2, mul_1)
+    range_perPixel = 0.04343
+    image_perSec = 3.2
+    degree_perCol = 0.169
 
-    r_list = []
-    rowIn = []
-    colIn = []
-    rowOut = []
-    colOut = []
+    print (int(3 * image_perSec))
+    print (int(4 * image_perSec))
 
-    for i in range(0,len(input_row)):
-        row_diff = input_row[i] - output_row[i]
-        col_diff = input_col[i] - output_col[i]
-        dis = np.power(row_diff,2) + np.power(col_diff,2)
-        r_list.append(dis)
-    
-    dis_mean = np.mean(r_list)
-    dis_med = np.median(r_list)
-    print (dis_mean, dis_med)
-    dis_index = []
-    for i in range(len(r_list)):
-        if r_list[i] < dis_med:
-            dis_index.append(i)
-    print (dis_index)
+    auv_state_1 = read_dvl(3)
+    auv_state_2 = read_dvl(4)
 
-    for i in dis_index:
-        rowIn.append(input_row[i])
-        colIn.append(input_col[i])
-        rowOut.append(output_row[i])
-        colOut.append(output_col[i])
-    
-    draw_matching(img1, img2, output_row, output_col, input_row, input_col, dis_index)
+    row_shift = np.abs(auv_state_1[0][1] - auv_state_2[0][1]) / range_perPixel
+    col_shift = np.abs(auv_state_1[0][2] - auv_state_2[0][2]) / degree_perCol
+    print (row_shift)
+    print (col_shift)
 
-    paramRow, paramCol = linear_approx(input_row, input_col, output_row, output_col)
-    print (len(paramRow))
-    img_remap =  remap_linear(img2, paramRow, paramCol)
+    # print (auv_state_1)
+    # print (auv_state_2)
 
-    paramRow, paramCol = linear_approx(rowIn, colIn, rowOut, colOut)
-    img_remap_upgrade =  remap_linear(img2, paramRow, paramCol)
+    if True:
+        output_row, output_col, input_row, input_col = matchingPair(img1, img2)
+        # input_row, input_col, output_row, output_col = matchingPair(mul_2, mul_1)
 
-    paramRow, paramCol = polynomial_approx(input_row, input_col, output_row, output_col)
-    print (len(paramRow))
-    img_poly = remap_poly(img2, paramRow, paramCol)
+        r_list = []
+        rowIn = []
+        colIn = []
+        rowOut = []
+        colOut = []
 
-    paramRow, paramCol = polynomial_approx(rowIn, colIn, rowOut, colOut)
-    img_poly_upgrade = remap_poly(img2, paramRow, paramCol)
+        for i in range(0,len(input_row)):
+            row_diff = input_row[i] - output_row[i]
+            col_diff = input_col[i] - output_col[i]
+            dis = np.power(row_diff,2) + np.power(col_diff,2)
+            r_list.append(dis)
+        
+        dis_mean = np.mean(r_list)
+        dis_med = np.median(r_list)
+        print (dis_mean, dis_med)
+        dis_index = []
+        for i in range(len(r_list)):
+            if r_list[i] < dis_mean:
+                dis_index.append(i)
+        print (dis_index)
+
+        for i in dis_index:
+            rowIn.append(input_row[i])
+            colIn.append(input_col[i])
+            rowOut.append(output_row[i])
+            colOut.append(output_col[i])
+        
+        draw_matching(img1, img2, output_row, output_col, input_row, input_col, dis_index)
+
+        paramRow, paramCol = linear_approx(input_row, input_col, output_row, output_col)
+        print (len(paramRow))
+        img_remap =  remap_linear(img2, paramRow, paramCol)
+
+        paramRow, paramCol = linear_approx(rowIn, colIn, rowOut, colOut)
+        img_remap_upgrade =  remap_linear(img2, paramRow, paramCol)
+
+        paramRow, paramCol = polynomial_approx(input_row, input_col, output_row, output_col)
+        print (len(paramRow))
+        img_poly = remap_poly(img2, paramRow, paramCol)
+
+        paramRow, paramCol = polynomial_approx(rowIn, colIn, rowOut, colOut)
+        img_poly_upgrade = remap_poly(img2, paramRow, paramCol)
 
     if True:
         coef = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
@@ -251,10 +292,10 @@ if __name__ == '__main__':
         print ("Poly approx reduce : " + str(coef[0][0]))
 
         row, col = img1.shape
-        trans_matrix = np.float32([[1,0,0],[0,1,-4]])
+        trans_matrix = np.float32([[1,0,0],[0,1,-2]])
         imgShift = cv2.warpAffine(img2, trans_matrix, (col,row))
-        img1 = img1[0:row-4,0:col]
-        imgShift = imgShift[0:row-4,0:col]
+        img1 = img1[0:row-2,0:col]
+        imgShift = imgShift[0:row-2,0:col]
 
         coef = cv2.matchTemplate(img1, imgShift, cv2.TM_CCOEFF_NORMED)
         print ("Coef shift : " + str(coef[0][0]))
