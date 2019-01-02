@@ -255,27 +255,34 @@ if __name__ == '__main__':
     # print (ref_dis)
     # coef_remap(img2)
 
-    range_perPixel = 0.04343
-    image_perSec = 3.2
-    degree_perCol = 0.169
+    if True:
+        range_perPixel = 0.04343
+        image_perSec = 3.2
+        degree_perCol = 0.169
 
-    # print (int(3 * image_perSec))
-    # print (int(4 * image_perSec))
+        # print (int(3 * image_perSec))
+        # print (int(4 * image_perSec))
 
-    auv_state_1 = read_dvl(3)
-    auv_state_2 = read_dvl(4)
+        auv_state_1 = read_dvl(3)
+        auv_state_2 = read_dvl(4)
 
-    row_shift = np.abs(auv_state_1[0][1] - auv_state_2[0][1]) / range_perPixel
-    col_shift = np.abs(auv_state_1[0][2] - auv_state_2[0][2]) / degree_perCol
-    # print (row_shift)
-    # print (col_shift)
+        row_shift = np.abs(auv_state_1[0][1] - auv_state_2[0][1]) / range_perPixel
+        col_shift = np.abs(auv_state_1[0][2] - auv_state_2[0][2]) / degree_perCol
+        print (row_shift)
+        print (col_shift)
 
-    # print (auv_state_1)
-    # print (auv_state_2)
+        # print (auv_state_1)
+        # print (auv_state_2)
 
-    pos = dvl_all(5)
+        # pos = dvl_all(5)
 
-    print (pos)
+        # print (pos[2][1])
+
+        # row_shift = np.abs(pos[3][1]) / range_perPixel
+        # col_shift = np.abs(pos[2][2] - pos[3][2]) / degree_perCol
+        # print (row_shift)
+        # print (col_shift)
+        # print (pos)
 
     if False:
         output_row, output_col, input_row, input_col = matchingPair(img1, img2)
@@ -298,7 +305,7 @@ if __name__ == '__main__':
         print (dis_mean, dis_med)
         dis_index = []
         for i in range(len(r_list)):
-            if r_list[i] < dis_mean:
+            if r_list[i] < dis_med:
                 dis_index.append(i)
         print (dis_index)
 
@@ -337,7 +344,7 @@ if __name__ == '__main__':
         print ("Poly approx reduce : " + str(coef[0][0]))
 
         row, col = img1.shape
-        trans_matrix = np.float32([[1,0,0],[0,1,-2]])
+        trans_matrix = np.float32([[1,0,0],[0,1,-4]])
         imgShift = cv2.warpAffine(img2, trans_matrix, (col,row))
         img1 = img1[0:row-2,0:col]
         imgShift = imgShift[0:row-2,0:col]
