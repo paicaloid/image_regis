@@ -46,5 +46,18 @@ def coefShift(img1, img2, num):
 
     trans_matrix = np.float32([[1,0,shiftCol],[0,1,shiftRow]])
     img2 = cv2.warpAffine(img2, trans_matrix, (col,row))
-    res = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+    # res = cv2.addWeighted(img1, 0.5, img2, 0.5, 0)
+    return img2
+
+def shiftImage(im1, im2, im3, im4, im5, num):
+    out2 = coefShift(im1, im2, num)
+    out3 = coefShift(im1, im3, num)
+    out4 = coefShift(im1, im4, num)
+    out5 = coefShift(im1, im5, num)
+
+    res = cv2.addWeighted(im1, 0.5, out2, 0.5, 0)
+    res = cv2.addWeighted(res, 0.5, out3, 0.5, 0)
+    res = cv2.addWeighted(res, 0.5, out4, 0.5, 0)
+    res = cv2.addWeighted(res, 0.5, out5, 0.5, 0)
+
     return res
