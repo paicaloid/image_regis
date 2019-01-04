@@ -3,6 +3,7 @@ import numpy as np
 import random
 import csv
 import math
+import transformations as tf
 import FeatureMatch
 import regisProcessing as rp
 import coef_shifting as coef
@@ -148,6 +149,56 @@ def read_dvl(sec):
         # print ("import... auv position @sec", sec)
         return auv_state[0]
 
+def positioning(sec):
+    xSpeed = []
+    ySpeed = []
+    zSpeed = []
+    first_check = True
+    inx = 0
+    auv_state = []
+    with open('recordDVL.csv') as csv_file:
+        reader = csv.reader(csv_file, delimiter=',')
+        for data in reader:
+            if (first_check):
+                first_check = False
+                init_time = int(data[2][0:10])
+                xSpeed.append(float(data[3]))
+                ySpeed.append(float(data[4]))
+                zSpeed.append(float(data[5]))
+            else:
+                if (int(data[2][0:10]) == init_time + inx):
+                    xSpeed.append(float(data[3]))
+                    ySpeed.append(float(data[4]))
+                    zSpeed.append(float(data[5]))
+                else:
+                    xMean = np.mean(xSpeed)
+                    yMean = np.mean(ySpeed)
+                    zMean = np.mean(zSpeed)
+                    auv_state.append((inx, xMean, yMean, zMean))
+
+                    inx += 1
+                    # init_time = int(data[2][0:10])
+                    xSpeed = []
+                    ySpeed = []
+                    zSpeed = []
+                    xSpeed.append(float(data[3]))
+                    ySpeed.append(float(data[4]))
+                    zSpeed.append(float(data[5]))
+
+                if (inx == sec):
+                    break
+        xPos = 0.0
+        yPos = 0.0
+        zPos = 0.0
+        pose = []
+        for state in auv_state:
+            if (state[0] > 0):
+                xPos = xPos + state[1]
+                yPos = yPos + state[2]
+                zPos = zPos + state[3]
+                pose.append((state[0], xPos, yPos, zPos))
+        return auv_state, pose
+
 def dvlShift(sec1, sec2):
     range_perPixel = 0.04343
     degree_perCol = 0.169
@@ -160,6 +211,66 @@ def dvlShift(sec1, sec2):
 
     print ("dvlShift :", row_shift, col_shift)
     return (row_shift, col_shift)
+
+def position_shift(pos1, pos2):
+    range_perPixel = 0.04343
+    degree_perCol = 0.169
+
+    row_shift = math.ceil((pos2[1] - pos1[1]) / range_perPixel)
+    col_shift = math.ceil((pos2[2] - pos1[2]) / degree_perCol)
+
+    # print ("poseShift :", row_shift, col_shift)
+
+    if True:
+        x_shift = (pos2[1] - pos1[1])
+        y_shift = (pos2[2] - pos1[2])
+        r_shift = np.sqrt(np.power(x_shift,2) + np.power(y_shift,2))
+        theta_shift = np.arctan2(y_shift, x_shift)
+        print (y_shift, x_shift)
+        print (math.degrees(theta_shift) + 205)
+        # print ("RThetaShift :", math.ceil((-1)*r_shift/range_perPixel), math.ceil(math.degrees(theta_shift)/degree_perCol))
+
+    # return (row_shift, col_shift)
+    return (math.ceil((-1)*r_shift/range_perPixel), math.ceil(theta_shift/degree_perCol))
+
+def robot_state_shift(pos1, pos2, yaw1, yaw2):
+    range_perPixel = 0.04343
+    degree_perCol = 0.169
+
+    row_shift = math.ceil((pos2[1] - pos1[1]) / range_perPixel)
+    col_shift = math.ceil((yaw2[1] - yaw1[1]))
+
+    print ("robotShift :", row_shift, col_shift)
+
+    return (row_shift, col_shift)
+
+def read_imu(sec):
+    first_check = True
+    inx = 0
+    yaw = []
+    degree_perCol = 0.169
+    with open('recordIMU.csv') as csv_file:
+        reader = csv.reader(csv_file, delimiter=',')
+        for data in reader:
+            if (first_check):
+                init_time = int(data[2][0:10])
+                first_check = False
+            else:
+                if (init_time == int(data[2][0:10]) + inx):
+                    xPos = data[3]
+                    yPos = data[4]
+                    zPos = data[5]
+                    wPos = data[6]
+                    temp = (xPos, yPos, zPos, wPos)
+                    euler_angular = tf.transformations.euler_from_quaternion(temp)
+                    # print (math.degrees(euler_angular[2]) / degree_perCol)
+                    theta = math.degrees(euler_angular[2]) / degree_perCol
+                    yaw.append((inx, theta))
+                    inx += 1
+                    init_time = init_time + inx
+                if (inx == sec):
+                    break
+    return yaw
 
 def merge_image(img1, img2, rowShift, colShift):
     row, col = img1.shape
@@ -192,14 +303,8 @@ if __name__ == '__main__':
         mul1 = read_multilook(6)
         mul2 = read_multilook(7)
 
-        # coefShift(img1, img2, 10)
-
         pos_shift = dvlShift(6,7)
 
-        # correlation(img1, img3, -8, -2)
-        # correlation(img1, img3, -9, -1)
-
-        # correlation(mul1, mul3, -8, -2)
         correlation(img1, img2, pos_shift[0], pos_shift[1])
 
         merge_image(img1, img2, pos_shift[0], pos_shift[1])
@@ -210,25 +315,43 @@ if __name__ == '__main__':
         # cv2.destroyAllWindows()
 
     if True:
+        state, position = positioning(25)
+        yaw = read_imu(25)
         for i in range(1,21):
             mul1 = read_multilook(i)
             mul2 = read_multilook(i+1)
             
-            pos_shift = dvlShift(i,i+1)
-            correlation(mul1, mul2, pos_shift[0], pos_shift[1])
+            # pos_shift = dvlShift(i,i+1)
+            # correlation(mul1, mul2, pos_shift[0], pos_shift[1])
 
             # pose = coefShift(mul1, mul2, 10)
             # correlation(mul1, mul2, pose[0], pose[1])
+
+            pos = position_shift(position[i], position[i+1])
+            # pos = robot_state_shift(position[i], position[i+1], yaw[i], yaw[i+1])
+            # correlation(mul1, mul2, pos[0], pos[1])
     
     if False:
-        img1 = rp.AverageMultiLook(70,1)
-        img2 = rp.AverageMultiLook(71,1)
-        img3 = rp.AverageMultiLook(72,1)
-        img4 = rp.AverageMultiLook(73,1)
-        img5 = rp.AverageMultiLook(74,1)
+        mul1 = read_multilook(5)
+        mul2 = read_multilook(6)
+        state, position = positioning(10)
+        yaw = read_imu(10)
+        # print (yaw)
+        pos = position_shift(position[5], position[6])
+        # correlation(mul1, mul2, pos[0], pos[1])
 
-        res = coef.shiftImage(img1, img2, img3, img4, img5, 15)
+    if False:
+        start = 3
+        img_ref = read_multilook(start)
+        cfar_ref = cafar(img_ref)
+        # print (cfar_ref.dtype)
+        row, col = cfar_ref.shape
 
-        cv2.imshow("img", res)
+        ele = np.ones((row, col),np.uint8) * 100
+
+        unk_map = ref = cv2.addWeighted(cfar_ref, 0.5, ele, 0.5, 0)
+
+        cv2.imshow("cfar_ref", cfar_ref)
+        cv2.imshow("unk_map", unk_map)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
