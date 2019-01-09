@@ -115,6 +115,29 @@ def coefShift(img1, img2, num):
             elif rowInx < 0 and colInx > 0:
                 imgRef = img1[0:row+rowInx, colInx:col]
                 imgShift = imgShift[0:row+rowInx, colInx:col]
+            # ! Origin
+            elif colInx == 0 and rowInx == 0:
+                # print ("Origin")
+                imgRef = img1[0:row, 0:col]
+                imgShift = imgShift[0:row, 0:col]
+            # ! row axis
+            elif colInx == 0 and rowInx != 0:
+                # print ("row axis")
+                if rowInx > 0:
+                    imgRef = img1[rowInx:row, 0:col]
+                    imgShift = imgShift[rowInx:row, 0:col]
+                elif rowInx < 0:
+                    imgRef = img1[0:row+rowInx, 0:col]
+                    imgShift = imgShift[0:row+rowInx, 0:col]
+            # ! col axis
+            elif rowInx == 0 and colInx != 0:
+                # print ("col axis")
+                if colInx > 0:
+                    imgRef = img1[0:row, colInx:col]
+                    imgShift = imgShift[0:row, colInx:col]
+                elif colInx < 0:
+                    imgRef = img1[0:row, 0:col+colInx]
+                    imgShift = imgShift[0:row, 0:col+colInx]
             
             coef = cv2.matchTemplate(imgRef, imgShift, cv2.TM_CCOEFF_NORMED)
             colList.append(coef[0][0])
@@ -219,9 +242,9 @@ def position_shift(pos1, pos2):
     row_shift = math.ceil((pos2[1] - pos1[1]) / range_perPixel)
     col_shift = math.ceil((pos2[2] - pos1[2]) / degree_perCol)
 
-    # print ("poseShift :", row_shift, col_shift)
+    print ("poseShift :", row_shift, col_shift)
 
-    if True:
+    if False:
         x_shift = (pos2[1] - pos1[1])
         y_shift = (pos2[2] - pos1[2])
         r_shift = np.sqrt(np.power(x_shift,2) + np.power(y_shift,2))
@@ -230,8 +253,8 @@ def position_shift(pos1, pos2):
         print (math.degrees(theta_shift) + 205)
         # print ("RThetaShift :", math.ceil((-1)*r_shift/range_perPixel), math.ceil(math.degrees(theta_shift)/degree_perCol))
 
-    # return (row_shift, col_shift)
-    return (math.ceil((-1)*r_shift/range_perPixel), math.ceil(theta_shift/degree_perCol))
+    return (row_shift, col_shift)
+    # return (math.ceil((-1)*r_shift/range_perPixel), math.ceil(theta_shift/degree_perCol))
 
 def robot_state_shift(pos1, pos2, yaw1, yaw2):
     range_perPixel = 0.04343
@@ -297,27 +320,29 @@ def merge_image(img1, img2, rowShift, colShift):
 
 if __name__ == '__main__':
 
-    if False:
+    if True:
         img1 = read_image(3)
         img2 = read_image(4)
-        mul1 = read_multilook(6)
-        mul2 = read_multilook(7)
+        mul1 = read_multilook(9)
+        mul2 = read_multilook(10)
 
-        pos_shift = dvlShift(6,7)
+        coefShift(mul1, mul2, 10)
 
-        correlation(img1, img2, pos_shift[0], pos_shift[1])
+        # pos_shift = dvlShift(6,7)
 
-        merge_image(img1, img2, pos_shift[0], pos_shift[1])
+        # correlation(img1, img2, pos_shift[0], pos_shift[1])
+
+        # merge_image(img1, img2, pos_shift[0], pos_shift[1])
 
         # cv2.imshow("img1", img1)
         # cv2.imshow("res", res)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-    if True:
+    if False:
         state, position = positioning(25)
         yaw = read_imu(25)
-        for i in range(1,21):
+        for i in range(1,11):
             mul1 = read_multilook(i)
             mul2 = read_multilook(i+1)
             
