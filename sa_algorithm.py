@@ -3,78 +3,38 @@ import numpy as np
 import random
 import csv
 import math
-import transformations as tf
+# import transformations as tf
 from matplotlib import pyplot as plt
+import sonarPlotting
 
-# # Only testing maximum observe energy
-# ! Remove after finish testing
-def test_obv(img1, img2, num):
-    colRange = np.arange((-1)*num, num+1, 1)
-    rowRange = colRange * (-1)
-    rowList = []
-    coefList = []
-    row, col = img1.shape
-    for rowInx in rowRange:
-        colList = []
-        for colInx in colRange:
-            trans_matrix = np.float32([[1,0,colInx],[0,1,rowInx]])
-            imgShift = cv2.warpAffine(img2, trans_matrix, (col,row))
-            print (rowInx, colInx)
-            # ! Quadrant 1
-            if rowInx > 0 and colInx > 0:
-                print ("Quard 1")
-                imgRef = img1[rowInx:row, colInx:col]
-                imgShift = imgShift[rowInx:row, colInx:col]
-            # ! Quadrant 2
-            elif rowInx > 0 and colInx < 0:
-                print ("Quard 2")
-                imgRef = img1[rowInx:row, 0:col+colInx]
-                imgShift = imgShift[rowInx:row, 0:col+colInx]
-            # ! Quadrant 3
-            elif rowInx < 0 and colInx < 0:
-                print ("Quard 3")
-                imgRef = img1[0:row+rowInx, 0:col+colInx]
-                imgShift = imgShift[0:row+rowInx, 0:col+colInx]
-            # ! Quadrant 4
-            elif rowInx < 0 and colInx > 0:
-                print ("Quard 4")
-                imgRef = img1[0:row+rowInx, colInx:col]
-                imgShift = imgShift[0:row+rowInx, colInx:col]
-            # ! Origin
-            elif colInx == 0 and rowInx == 0:
-                print ("Origin")
-                imgRef = img1[0:row, 0:col]
-                imgShift = imgShift[0:row, 0:col]
-            # ! row axis
-            elif colInx == 0 and rowInx != 0:
-                print ("row axis")
-                if rowInx > 0:
-                    imgRef = img1[rowInx:row, 0:col]
-                    imgShift = imgShift[rowInx:row, 0:col]
-                elif rowInx < 0:
-                    imgRef = img1[0:row+rowInx, 0:col]
-                    imgShift = imgShift[0:row+rowInx, 0:col]
-            # ! col axis
-            elif rowInx == 0 and colInx != 0:
-                print ("col axis")
-                if colInx > 0:
-                    imgRef = img1[0:row, colInx:col]
-                    imgShift = imgShift[0:row, colInx:col]
-                elif colInx < 0:
-                    imgRef = img1[0:row, 0:col+colInx]
-                    imgShift = imgShift[0:row, 0:col+colInx]
-            
-            num_pixel = imgRef.shape[0] * imgRef.shape[1]
-            eng = np.power((imgRef - imgShift),2)
-            eng = np.sum(eng) / num_pixel
-            colList.append(eng)
-        coefList.append(max(colList))
-        rowList.append((rowInx, max(enumerate(colList), key=(lambda x: x[1]))))
-    posShift = rowList[np.argmax(coefList)]
-    shiftRow = posShift[0]
-    shiftCol = posShift[1][0] - num
-    # print (posShift)
-    print ("coefShift :", shiftRow, shiftCol)
+from skimage import img_as_ubyte
+
+
+def cafar(img_gray):
+    box_size = 59
+    guard_size = 11
+    pfa = 0.25
+    if(len(img_gray) == 3):
+        img_gray = cv2.cvtColor(img_gray, cv2.COLOR_BGR2GRAY)
+
+    n_ref_cell = (box_size * box_size) - (guard_size * guard_size)
+    alpha = n_ref_cell * (math.pow(pfa, (-1.0/n_ref_cell)) - 1)
+
+    ## Create kernel
+    kernel_beta = np.ones([box_size, box_size], 'float32')
+    width = round((box_size - guard_size) / 2.0)
+    height = round((box_size - guard_size) / 2.0)
+    kernel_beta[width: box_size - width, height: box_size - height] = 0.0
+    kernel_beta = (1.0 / n_ref_cell) * kernel_beta
+    beta_pow = cv2.filter2D(img_gray, ddepth = cv2.CV_32F, kernel = kernel_beta)
+    thres = alpha * (beta_pow)
+    out = (255 * (img_gray > thres)) + (0 * (img_gray < thres))
+    out = out.astype(np.uint8)
+
+    kernel = np.ones((7,7),np.uint8)
+    out = cv2.erode(out, kernel, iterations = 1)
+    out = cv2.dilate(out, kernel, iterations = 3)
+    return out
 
 def read_image(sec):
     image_perSec = 3.3
@@ -216,135 +176,186 @@ def shift_and_crop(img1, img2, rowInx, colInx):
     
     return imgRef, imgShift
 
+def accepted_prob(new_eng, old_eng, temp):
+    diff_eng = np.power((new_eng - old_eng), 2)
+    prob = np.exp(diff_eng) / temp
+    return prob
+
+def correlation(img1, img2, shift_row, shift_col):
+    row, col = img1.shape
+    trans_matrix = np.float32([[1,0,shift_col],[0,1,shift_row]])
+    img2 = cv2.warpAffine(img2, trans_matrix, (col,row))
+    # ! Quadrant 1
+    if shift_row > 0 and shift_col > 0:
+        img1 = img1[shift_row:row, shift_col:col]
+        img2 = img2[shift_row:row, shift_col:col]
+    # ! Quadrant 2
+    elif shift_row > 0 and shift_col < 0:
+        img1 = img1[shift_row:row, 0:col+shift_col]
+        img2 = img2[shift_row:row, 0:col+shift_col]
+    # ! Quadrant 3
+    elif shift_row < 0 and shift_col < 0:
+        img1 = img1[0:row+shift_row, 0:col+shift_col]
+        img2 = img2[0:row+shift_row, 0:col+shift_col]
+    # ! Quadrant 4
+    elif shift_row < 0 and shift_col > 0:
+        img1 = img1[0:row+shift_row, shift_col:col]
+        img2 = img2[0:row+shift_row, shift_col:col]
+
+    coef = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
+    print (coef[0][0])
+
 class sa_optimize:
-    def __init__(self, sec1, sec2):
-        self.img1 = read_multilook(sec1)
-        self.img2 = read_multilook(sec2)
-        self.shifting(sec1, sec2)
-        self.observe_energy()
+    def __init__(self, img1, img2, pose, cfar):
+        self.row, self.col = img1.shape
+        self.init_state = cfar
+        # self.state_z = self.init_state
+        self.state_z = 2 * np.ones((self.row,self.col), dtype = float) 
         
-        self.init_z_energy(100)
+        self.observe = 0
+        self.old_energyZ = 0
+        self.new_energyZ = 0
         
-        self.loop_state = False
-        # if (self.loop_state):
-        #     self.update_energy(100)
-        for i in range(0,100):
-            self.update_energy(200)
-        
-    def shifting(self, sec1, sec2):
-        speed, pose = positioning(sec1 + sec2)
-        self.poseShift = position_shift(pose[sec1], pose[sec2])
-        # print (self.poseShift)
+        self.temp = 1.0
+        self.min_temp = 0.00001
+        self.alpha = 0.9
+        self.loop_end = True
 
-    def observe_energy(self):
-        rowInx = self.poseShift[0]
-        colInx = self.poseShift[1]
-        row, col = self.img1.shape
-        trans_matrix = np.float32([[1,0,colInx],[0,1,rowInx]])
-        imgShift = cv2.warpAffine(self.img2, trans_matrix, (col,row))
-        
-        imgRef, imgShift = shift_and_crop(self.img1, imgShift, rowInx, colInx)
-        eng = np.power((imgRef - imgShift),2)
-        self.obv_energy = np.sum(eng) / 1000.0
-        # print (self.obv_energy)
+        self.count_increase = 0
+        self.count_decrease = 0
 
-    def init_z_energy(self, num):
-        row, col = self.img1.shape
-        z_init = 2 * np.ones((row,col), dtype=float) 
-        update = np.random.uniform(low=-1.0, high=1.0, size=(row,col))
-        z_update = z_init + update
+        # for i in range(20):
+        #     self.update(pose)
+        while(self.loop_end):
+            self.update(pose)
 
-        rowInx = self.poseShift[0]
-        colInx = self.poseShift[1]
-        row, col = self.img1.shape
-        trans_matrix = np.float32([[1,0,colInx],[0,1,rowInx]])
-        z_Shift = cv2.warpAffine(z_update, trans_matrix, (col,row))
-        z_Ref, z_Shift = shift_and_crop(z_init, z_Shift, rowInx, colInx)
-
-        row, col = z_Ref.shape
-        ran_row = np.random.randint(1+5, row + 1-5, size=num)
-        ran_col = np.random.randint(1+5, col + 1-5, size=num)
-        z_eng = 0
-        for i in range(0,num):
-            row_pose = ran_row[i]
-            col_pose = ran_col[i]
-            sum_diff = 0
-            for m in range(row_pose-1, row_pose+2):
-                for n in range(col_pose-1, col_pose+2):
-                    if m == row_pose and n == col_pose:
-                       pass
-                    else:
-                        diff = z_Shift[row_pose][col_pose] - z_Ref[m][n]
-                        diff = np.power(diff ,2)
-                        sum_diff = sum_diff + diff
-            z_eng = z_eng + sum_diff
-
-            # neighbor_ref = z_Ref[row_pose-1:row_pose+2, col_pose-1:col_pose+2]
-            # neighbor_Shift = z_Shift[row_pose-1:row_pose+2, col_pose-1:col_pose+2]
-            # eng = np.power((neighbor_ref - neighbor_Shift),2)
-            # z_eng =  z_eng + np.sum(eng)
-
-        self.z_init = z_update
-        self.sum_energy = self.obv_energy + z_eng
-        # print ("Obv Energy :", self.obv_energy)
-        # print ("Z Energy :", z_eng)
-        # print ("Sum Energy :", self.sum_energy)
-        # print ("=================")
-    
-    def update_energy(self, num):
-        row, col = self.img1.shape 
-        update = np.random.uniform(low=-1.0, high=1.0, size=(row,col))
-        z_update = self.z_init + update
-
-        rowInx = self.poseShift[0]
-        colInx = self.poseShift[1]
-        row, col = self.img1.shape
-        trans_matrix = np.float32([[1,0,colInx],[0,1,rowInx]])
-        z_Shift = cv2.warpAffine(z_update, trans_matrix, (col,row))
-        z_Ref, z_Shift = shift_and_crop(self.z_init, z_Shift, rowInx, colInx)
-        
-        row, col = z_Ref.shape
-        ran_row = np.random.randint(1+5, row + 1-5, size=num)
-        ran_col = np.random.randint(1+5, col + 1-5, size=num)
-        z_eng = 0
-        for i in range(0,num):
-            row_pose = ran_row[i]
-            col_pose = ran_col[i]
-            sum_diff = 0
-            for m in range(row_pose-1, row_pose+2):
-                for n in range(col_pose-1, col_pose+2):
-                    if m == row_pose and n == col_pose:
-                       pass
-                    else:
-                        diff = z_Shift[row_pose][col_pose] - z_Ref[m][n]
-                        diff = np.power(diff ,2)
-                        sum_diff = sum_diff + diff
-            z_eng = z_eng + sum_diff
-        sum_new = self.obv_energy + z_eng
-        # print ("Obv Energy :", self.obv_energy)
-        # print ("Z Energy :", z_eng)
-        # print ("Sum Energy :", sum_new)
-        # print ("=================")
-        # print (sum_new, self.sum_energy)
-        if self.loop_state:
-            self.z_init = z_update
-            self.sum_energy = sum_new
-            self.loop_state = False
+        if self.temp > self.min_temp:
+            print ("MORE")
         else:
-            if (sum_new < self.sum_energy):
-                print ("+++++   Decrease   +++++")
-                self.z_init = z_update
-                self.sum_energy = sum_new
-            else:
-                print ("+++++   Increase   +++++")
-                self.sum_energy = sum_new
-                self.loop_state = False
+            print ("LESS")
 
+        print ("Increase :", self.count_increase, "times")
+        print ("Decrease :", self.count_decrease, "times")
+        # print (self.init_state.shape)
+        # print (self.state_z.shape)
+        # print (self.init_state.dtype)
+        # print (self.state_z.dtype)
+        sonarPlotting.subplot2(self.init_state, self.state_z, ["1", "2"])
+        # res1 = self.init_state.astype(np.uint8)
+        # res2 = self.state_z.astype(np.uint8)
+        # sonarPlotting.subplot4(self.init_state, self.state_z, res1, res2, ["1", "2", "3", "4"])
+        # correlation(self.init_state, self.state_z, 0, 0)
+        # coef = cv2.matchTemplate(self.init_state, self.state_z, cv2.TM_CCOEFF_NORMED)
+        # print (coef[0][0])
+        cvt_img = self.state_z / np.max(self.state_z)
+        cvt_img = 255 * cvt_img
+        cvt_img = cvt_img.astype(np.uint8)
+        cv2.imshow("self.init_state", self.init_state)
+        cv2.imshow("cvt_img", cvt_img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    def obv_energy(self, img1, img2, pose):
+        rowShift = pose[0]
+        colShift = pose[1]
+        trans = np.float32([[1,0,colShift],[0,1,rowShift]])
+        imgShift = cv2.warpAffine(img2, trans, (self.col,self.row))
+
+        img_ref, img_remap = shift_and_crop(img1, imgShift, rowShift, colShift)
+        eng = np.power((img_ref - img_remap), 2)
+        self.observe = np.sum(eng)
         
+    def update(self, pose):
+        rand_move = np.random.uniform(low = -0.2, high = 0.2, size = (self.row,self.col))
+        self.next_state_z = self.state_z + rand_move
+
+        self.z_energy(pose)
+
+        if self.old_energyZ == 0:
+            print ("First Initial")
+            self.old_energyZ = self.new_energyZ
+            self.state_z = self.next_state_z
+        else:
+            # print (self.new_energyZ, self.old_energyZ)
+            if self.new_energyZ < self.old_energyZ:
+                # print ("Decrease")
+                self.count_decrease += 1
+                self.state_z = self.next_state_z
+                self.old_energyZ = self.new_energyZ
+            else:
+                # print ("Increase")
+                self.count_increase += 1
+                if self.temp > self.min_temp:
+                    prob = accepted_prob(self.new_energyZ, self.old_energyZ, self.temp)
+                    if prob > random.random():
+                        self.state_z = self.next_state_z
+                        self.old_energyZ = self.new_energyZ
+                    else:
+                        self.loop_end = False
+                else:
+                    self.loop_end = False
+
+                self.temp = self.temp * self.alpha
+
+    def z_energy(self, pose):
+        num = 50
+        z_new = 0
+        rowShift = pose[0]
+        colShift = pose[1]
+        trans = np.float32([[1,0,colShift],[0,1,rowShift]])
+        z_Shift = cv2.warpAffine(self.next_state_z, trans, (self.col,self.row))
+        z_ref, z_remap = shift_and_crop(self.init_state, z_Shift, rowShift, colShift)
+
+        row, col = z_ref.shape
+        ran_row = np.random.randint(1+15, row + 1-15, size=num)
+        ran_col = np.random.randint(1+15, col + 1-15, size=num)
+        for i in range(0,num):
+            row_pose = ran_row[i]
+            col_pose = ran_col[i]
+            sum_diff = 0
+            for m in range(row_pose-2, row_pose+3):
+                for n in range(col_pose-2, col_pose+3):
+                    if m == row_pose and n == col_pose:
+                       pass
+                    else:
+                        diff = z_remap[row_pose][col_pose] - z_ref[m][n]
+                        # diff = z_remap[row_pose][col_pose] - z_remap[m][n]
+                        diff = np.power(diff ,2)
+                        sum_diff = sum_diff + diff
+            z_new = z_new + sum_diff
+        self.new_energyZ = z_new
 
 if __name__ == '__main__':
-    sa_optimize(3,4)
-    # print ("END")
-    img1 = read_multilook(3)
-    img2 = read_multilook(4)
-    # test_obv(img1, img2, 10)
+    start = 3
+    stop = 5
+    img1 = read_multilook(start)
+    img2 = read_multilook(stop)
+    speed, pose = positioning(20)
+    pose_Shift = position_shift(pose[start], pose[stop])
+
+    img_cfar = cafar(img1)
+    blur = cv2.GaussianBlur(img_cfar,(21,21),5)
+
+    # cv2.imshow("img_cfar", img_cfar)
+    # cv2.imshow("blur", blur)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+
+    blur = (blur/255.0) * 2.0
+    added = 1 * np.ones((img_cfar.shape), dtype = float) 
+    blur = blur + added
+    print (np.max(blur))
+    print (np.min(blur))
+    print (blur[200][644])
+
+    cvt_img = blur / np.max(blur) # normalize the data to 0 - 1
+    print (np.max(cvt_img))
+    print (np.min(cvt_img))
+    cvt_img = 255 * cvt_img
+    cvt_img = cvt_img.astype(np.uint8)
+    cv2.imshow("cvt_img", cvt_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    sa_optimize(img1, img2, pose_Shift, blur)
