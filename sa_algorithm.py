@@ -178,12 +178,13 @@ def shift_and_crop(img1, img2, rowInx, colInx):
     return imgRef, imgShift
 
 def accepted_prob(new_eng, old_eng, temp):
-    diff_eng = np.power((new_eng - old_eng), 2)
+    # diff_eng = np.power((new_eng - old_eng), 2)
+    # prob = np.exp(diff_eng / temp) 
+    # diff_eng = new_eng - old_eng
+    diff_eng = old_eng - new_eng
+    prob = np.exp(diff_eng)
     print ("diff_eng :", diff_eng)
     print ("temp :", temp)
-    prob = np.exp(diff_eng / temp) 
-    # diff_eng = old_eng - new_eng
-    # prob = np.exp(diff_eng / temp)
     return prob
 
 def correlation(img1, img2, shift_row, shift_col):
@@ -218,7 +219,7 @@ class sa_optimize:
         self.state_z = 0.3 * np.ones((self.row,self.col), dtype = float) 
         
         self.observe = 0
-        self.old_energyZ = 0
+        self.old_energyZ = self.energy_init(pose)
         self.new_energyZ = 0
         
         self.temp = 1.0
@@ -229,6 +230,8 @@ class sa_optimize:
         self.count_increase = 0
         self.count_decrease = 0
 
+        print ("init_energy :", self.old_energyZ)
+        print ("==========================")
         # for i in range(20):
         #     self.update(pose)
         # while(self.loop_end):
@@ -236,13 +239,25 @@ class sa_optimize:
         while(self.temp > self.min_temp):
             self.update(pose)
 
+        # while(1):
+        #     commd = input("Continue? :")
+        #     if commd == "y":
+        #         self.update(pose)
+        #     else:
+        #         break
+        #     print ("==========================")
+
         if self.temp > self.min_temp:
             print ("MORE")
         else:
             print ("LESS")
 
+        print ("Finish")
         print ("Increase :", self.count_increase, "times")
         print ("Decrease :", self.count_decrease, "times")
+        print ("output_max :", np.max(self.state_z))
+        print ("output_min :", np.min(self.state_z))
+
         # print (self.init_state.shape)
         # print (self.state_z.shape)
         # print (self.init_state.dtype)
@@ -254,13 +269,41 @@ class sa_optimize:
         # correlation(self.init_state, self.state_z, 0, 0)
         # coef = cv2.matchTemplate(self.init_state, self.state_z, cv2.TM_CCOEFF_NORMED)
         # print (coef[0][0])
-        cvt_img = self.state_z / np.max(self.state_z)
-        cvt_img = 255 * cvt_img
-        cvt_img = cvt_img.astype(np.uint8)
-        cv2.imshow("self.init_state", self.init_state)
-        cv2.imshow("cvt_img", cvt_img)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cvt_img = self.state_z / np.max(self.state_z)
+        # cvt_img = 255 * cvt_img
+        # cvt_img = cvt_img.astype(np.uint8)
+        # cv2.imshow("self.init_state", self.init_state)
+        # cv2.imshow("cvt_img", cvt_img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+    def energy_init(self, pose):
+        num = 100
+        z_new = 0
+        rowShift = pose[0]
+        colShift = pose[1]
+        trans = np.float32([[1,0,colShift],[0,1,rowShift]])
+        z_Shift = cv2.warpAffine(self.state_z, trans, (self.col,self.row))
+        z_ref, z_remap = shift_and_crop(self.init_state, z_Shift, rowShift, colShift)
+
+        row, col = z_ref.shape
+        ran_row = np.random.randint(1+15, row + 1-15, size=num)
+        ran_col = np.random.randint(1+15, col + 1-15, size=num)
+        for i in range(0,num):
+            row_pose = ran_row[i]
+            col_pose = ran_col[i]
+            sum_diff = 0
+            for m in range(row_pose-1, row_pose+2):
+                for n in range(col_pose-1, col_pose+2):
+                    if m == row_pose and n == col_pose:
+                       pass
+                    else:
+                        diff = z_remap[row_pose][col_pose] - z_ref[m][n]
+                        # diff = z_remap[row_pose][col_pose] - z_remap[m][n]
+                        diff = np.power(diff ,2)
+                        sum_diff = sum_diff + diff
+            z_new = z_new + sum_diff
+        return z_new/num
 
     def obv_energy(self, img1, img2, pose):
         rowShift = pose[0]
@@ -273,7 +316,7 @@ class sa_optimize:
         self.observe = np.sum(eng)
         
     def update(self, pose):
-        rand_move = np.random.uniform(low = -0.05, high = 0.05, size = (self.row,self.col))
+        rand_move = np.random.uniform(low = -0.01, high = 0.01, size = (self.row,self.col))
         self.next_state_z = self.state_z + rand_move
 
         self.z_energy(pose)
@@ -283,14 +326,15 @@ class sa_optimize:
             self.old_energyZ = self.new_energyZ
             self.state_z = self.next_state_z
         else:
-            # print (self.new_energyZ, self.old_energyZ)
+            print ("old_energy :", self.old_energyZ)
+            print ("new_energy :", self.new_energyZ)
             if self.new_energyZ < self.old_energyZ:
-                # print ("Decrease")
+                print ("Decrease")
                 self.count_decrease += 1
                 self.state_z = self.next_state_z
                 self.old_energyZ = self.new_energyZ
             else:
-                # print ("Increase")
+                print ("Increase")
                 self.count_increase += 1
                 if self.temp > self.min_temp:
                     prob = accepted_prob(self.new_energyZ, self.old_energyZ, self.temp)
@@ -321,8 +365,8 @@ class sa_optimize:
             row_pose = ran_row[i]
             col_pose = ran_col[i]
             sum_diff = 0
-            for m in range(row_pose-2, row_pose+3):
-                for n in range(col_pose-2, col_pose+3):
+            for m in range(row_pose-1, row_pose+2):
+                for n in range(col_pose-1, col_pose+2):
                     if m == row_pose and n == col_pose:
                        pass
                     else:
@@ -331,7 +375,7 @@ class sa_optimize:
                         diff = np.power(diff ,2)
                         sum_diff = sum_diff + diff
             z_new = z_new + sum_diff
-        self.new_energyZ = z_new
+        self.new_energyZ = z_new/num
 
 if __name__ == '__main__':
     start = 3
@@ -359,12 +403,12 @@ if __name__ == '__main__':
 
     cvt_img = blur / np.max(blur) # normalize the data to 0 - 1
     cvt_img = cvt_img * 0.5
-    print (np.max(cvt_img))
-    print (np.min(cvt_img))
-    cvt_img = 255 * cvt_img
-    cvt_img = cvt_img.astype(np.uint8)
-    cv2.imshow("cvt_img", cvt_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-
+    print ("init_max :", np.max(cvt_img))
+    print ("init_min :", np.min(cvt_img))
+    # cvt_img = 255 * cvt_img
+    # cvt_img = cvt_img.astype(np.uint8)
+    # cv2.imshow("cvt_img", cvt_img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+    print ("start simulated annealing...")
     sa_optimize(img1, img2, pose_Shift, cvt_img)
