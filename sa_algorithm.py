@@ -61,7 +61,8 @@ def read_multilook(sec):
         ref = cv2.addWeighted(ref, 0.5, img, 0.5, 0)
     picName = "RTheta_img_" + str(start) + ".jpg"
     # print ("success multilook...   " + picName)
-    ref = ref[0:500, 0:768]
+    ref = ref[0:500, 384:768]
+    # ref = ref[0:500, 0:348]
     return ref
 
 def positioning(sec):
@@ -178,7 +179,11 @@ def shift_and_crop(img1, img2, rowInx, colInx):
 
 def accepted_prob(new_eng, old_eng, temp):
     diff_eng = np.power((new_eng - old_eng), 2)
-    prob = np.exp(diff_eng) / temp
+    print ("diff_eng :", diff_eng)
+    print ("temp :", temp)
+    prob = np.exp(diff_eng / temp) 
+    # diff_eng = old_eng - new_eng
+    # prob = np.exp(diff_eng / temp)
     return prob
 
 def correlation(img1, img2, shift_row, shift_col):
@@ -210,7 +215,7 @@ class sa_optimize:
         self.row, self.col = img1.shape
         self.init_state = cfar
         # self.state_z = self.init_state
-        self.state_z = 2 * np.ones((self.row,self.col), dtype = float) 
+        self.state_z = 0.3 * np.ones((self.row,self.col), dtype = float) 
         
         self.observe = 0
         self.old_energyZ = 0
@@ -226,7 +231,9 @@ class sa_optimize:
 
         # for i in range(20):
         #     self.update(pose)
-        while(self.loop_end):
+        # while(self.loop_end):
+        #     self.update(pose)
+        while(self.temp > self.min_temp):
             self.update(pose)
 
         if self.temp > self.min_temp:
@@ -266,7 +273,7 @@ class sa_optimize:
         self.observe = np.sum(eng)
         
     def update(self, pose):
-        rand_move = np.random.uniform(low = -0.2, high = 0.2, size = (self.row,self.col))
+        rand_move = np.random.uniform(low = -0.05, high = 0.05, size = (self.row,self.col))
         self.next_state_z = self.state_z + rand_move
 
         self.z_energy(pose)
@@ -287,6 +294,7 @@ class sa_optimize:
                 self.count_increase += 1
                 if self.temp > self.min_temp:
                     prob = accepted_prob(self.new_energyZ, self.old_energyZ, self.temp)
+                    print (prob)
                     if prob > random.random():
                         self.state_z = self.next_state_z
                         self.old_energyZ = self.new_energyZ
@@ -298,7 +306,7 @@ class sa_optimize:
                 self.temp = self.temp * self.alpha
 
     def z_energy(self, pose):
-        num = 50
+        num = 100
         z_new = 0
         rowShift = pose[0]
         colShift = pose[1]
@@ -342,14 +350,15 @@ if __name__ == '__main__':
     # cv2.destroyAllWindows()
 
 
-    blur = (blur/255.0) * 2.0
+    blur = (blur/255.0) * 0.5
     added = 1 * np.ones((img_cfar.shape), dtype = float) 
-    blur = blur + added
-    print (np.max(blur))
-    print (np.min(blur))
-    print (blur[200][644])
+    # blur = blur + added
+    # print (np.max(blur))
+    # print (np.min(blur))
+    # print (blur[200][644])
 
     cvt_img = blur / np.max(blur) # normalize the data to 0 - 1
+    cvt_img = cvt_img * 0.5
     print (np.max(cvt_img))
     print (np.min(cvt_img))
     cvt_img = 255 * cvt_img
@@ -358,4 +367,4 @@ if __name__ == '__main__':
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-    sa_optimize(img1, img2, pose_Shift, blur)
+    sa_optimize(img1, img2, pose_Shift, cvt_img)
