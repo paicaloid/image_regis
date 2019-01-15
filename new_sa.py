@@ -408,14 +408,77 @@ if __name__ == '__main__':
         # row, col = img1.shape
         # img1[0:row, 0:col] = cf1
 
-        cv2.imshow("cf1", img1)
-        cv2.waitKey(0)
+
+        out = cv2.addWeighted(img1, 0.5, cf1, 0.5, 0)
+
+        # cv2.imshow("out", out)
+        
+        # col_list  = []
+        # inx = int(128/2)
+        # for i in range(1,7):
+        #     crop = img1[0:500, i*inx:(i*inx)+1]
+        #     # col_list.append(crop)
+        #     # cf_list = cf1[0:500, 500:501]
+        #     plt.plot(crop)
+        #     plt.show()
+
+        col_list = img1[0:500, 500:501]
+        cf_list = cf1[0:500, 500:501]
+
+        col_list = np.flip(col_list,0)
+        cf_list = np.flip(cf_list,0)
+        pose_cf = []
+
+        # print (np.max(cf_list))
+        # print (np.min(cf_list))
+        for i in range(len(cf_list)):
+            if cf_list[i] == 255:
+                pose_cf.append(i)
+        # print (pose_cf)
+        # print (pose_cf[0])
+        # print (pose_cf[len(pose_cf)-1])
+
+        start_cf = pose_cf[0]
+        stop_cf = pose_cf[len(pose_cf)-1]
+
+        for j in pose_cf:
+            if col_list[j] == np.max(col_list):
+                peak = j
+
+        # print (peak)
+
+        shadow = col_list[stop_cf:500]
+        sha_list = []
+        for k in range(len(shadow)):
+            if shadow[k] < 70:
+                sha_list.append(k)
+            else:
+                break
+        # print (sha_list)
+
+        start_sha = sha_list[0] + stop_cf
+        stop_sha = sha_list[len(sha_list)-1] + stop_cf
+
+        
+        # res = col_list * cf_list
+        # res = res.astype(np.uint8)
+
+        # sonarPlotting.subplot2(out, out, ["1", "2"])
+        pix_range = 30.0 / 660.0
+        print (start_cf, stop_cf, start_sha, stop_sha)
+        print (start_cf*pix_range, stop_cf*pix_range, stop_sha*pix_range)
+
+        auv = 2.2
+
+        height = auv * (((stop_sha*pix_range) - (peak*pix_range))/(stop_sha*pix_range))
+
+        print (height)
+
+        # plt.plot(res)
+        # plt.plot(col_list)
+        # plt.plot(cf_list)
+        # plt.plot(50 * np.ones(500))
+        # plt.plot(shadow)
+        # plt.show()
+        # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        col_list  = []
-        inx = int(128/2)
-        for i in range(1,7):
-            crop = img1[0:500, i*inx:(i*inx)+1]
-            # col_list.append(crop)
-        # cf_list = cf1[0:500, 500:501]
-            plt.plot(crop)
-            plt.show()
