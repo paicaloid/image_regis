@@ -212,11 +212,11 @@ def correlation(img1, img2, shift_row, shift_col):
     print (coef[0][0])
 
 class sa_optimize:
-    def __init__(self, img1, img2, pose, cfar):
+    def __init__(self, img1, img2, pose, cfar, cfar2):
         self.row, self.col = img1.shape
         self.init_state = cfar
-        # self.state_z = self.init_state
-        self.state_z = 0.3 * np.ones((self.row,self.col), dtype = float) 
+        self.state_z = cfar2
+        # self.state_z = 0.3 * np.ones((self.row,self.col), dtype = float) 
         
         self.observe = 0
         self.old_energyZ = self.energy_init(pose)
@@ -238,6 +238,15 @@ class sa_optimize:
         #     self.update(pose)
         while(self.temp > self.min_temp):
             self.update(pose)
+            cvt_img = self.state_z / np.max(self.state_z)
+            cvt_img = 255.0 * cvt_img
+            cvt_img = cvt_img.astype(np.uint8)
+            # cv2.imshow("self.init_state", self.init_state)
+            cv2.imshow("cvt_img", cvt_img)
+            cv2.waitKey(50)
+            # cv2.destroyAllWindows()
+            print ("----------------")
+
 
         # while(1):
         #     commd = input("Continue? :")
@@ -284,7 +293,9 @@ class sa_optimize:
         colShift = pose[1]
         trans = np.float32([[1,0,colShift],[0,1,rowShift]])
         z_Shift = cv2.warpAffine(self.state_z, trans, (self.col,self.row))
-        z_ref, z_remap = shift_and_crop(self.init_state, z_Shift, rowShift, colShift)
+        # z_ref, z_remap = shift_and_crop(self.init_state, z_Shift, rowShift, colShift)
+        z_ref = self.init_state
+        z_remap = self.state_z
 
         row, col = z_ref.shape
         ran_row = np.random.randint(1+15, row + 1-15, size=num)
@@ -350,13 +361,15 @@ class sa_optimize:
                 self.temp = self.temp * self.alpha
 
     def z_energy(self, pose):
-        num = 100
+        num = 50
         z_new = 0
         rowShift = pose[0]
         colShift = pose[1]
         trans = np.float32([[1,0,colShift],[0,1,rowShift]])
         z_Shift = cv2.warpAffine(self.next_state_z, trans, (self.col,self.row))
-        z_ref, z_remap = shift_and_crop(self.init_state, z_Shift, rowShift, colShift)
+        # z_ref, z_remap = shift_and_crop(self.init_state, z_Shift, rowShift, colShift)
+        z_ref = self.init_state
+        z_remap = self.state_z
 
         row, col = z_ref.shape
         ran_row = np.random.randint(1+15, row + 1-15, size=num)
@@ -365,8 +378,8 @@ class sa_optimize:
             row_pose = ran_row[i]
             col_pose = ran_col[i]
             sum_diff = 0
-            for m in range(row_pose-1, row_pose+2):
-                for n in range(col_pose-1, col_pose+2):
+            for m in range(row_pose-5, row_pose+6):
+                for n in range(col_pose-5, col_pose+6):
                     if m == row_pose and n == col_pose:
                        pass
                     else:
@@ -388,27 +401,27 @@ if __name__ == '__main__':
     img_cfar = cafar(img1)
     blur = cv2.GaussianBlur(img_cfar,(21,21),5)
 
-    # cv2.imshow("img_cfar", img_cfar)
-    # cv2.imshow("blur", blur)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-
-
     blur = (blur/255.0) * 0.5
     added = 1 * np.ones((img_cfar.shape), dtype = float) 
-    # blur = blur + added
-    # print (np.max(blur))
-    # print (np.min(blur))
-    # print (blur[200][644])
 
     cvt_img = blur / np.max(blur) # normalize the data to 0 - 1
     cvt_img = cvt_img * 0.5
     print ("init_max :", np.max(cvt_img))
     print ("init_min :", np.min(cvt_img))
-    # cvt_img = 255 * cvt_img
-    # cvt_img = cvt_img.astype(np.uint8)
-    # cv2.imshow("cvt_img", cvt_img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    
+    img_cfar2 = cafar(img2)
+    blur2 = cv2.GaussianBlur(img_cfar2,(21,21),5)
+
+    blur2 = (blur2/255.0) * 0.5
+
+    cvt_img2 = blur2 / np.max(blur2) # normalize the data to 0 - 1
+    cvt_img2 = cvt_img2 * 0.5
+
+    cv2.imshow("cvt_img2", cvt_img2)
+    cv2.imshow("cvt_img", cvt_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
     print ("start simulated annealing...")
-    sa_optimize(img1, img2, pose_Shift, cvt_img)
+    sa_optimize(img1, img2, pose_Shift, cvt_img, cvt_img2)
