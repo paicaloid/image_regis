@@ -3,8 +3,10 @@ import numpy as np
 import random
 import csv
 import math
-import transformations as tf
+# import transformations as tf
 from matplotlib import pyplot as plt
+from skimage.transform import warp
+from skimage import img_as_ubyte
 import sonarPlotting
 
 def cafar(img_gray):
@@ -59,6 +61,7 @@ def read_multilook(sec):
     picName = "RTheta_img_" + str(start) + ".jpg"
     # print ("success multilook...   " + picName)
     ref = ref[0:500, 0:768]
+    # ref = ref[0:500, 0:348]
     return ref
 
 def positioning(sec):
@@ -174,162 +177,245 @@ def shift_and_crop(img1, img2, rowInx, colInx):
     return imgRef, imgShift
 
 def accepted_prob(new_eng, old_eng, temp):
-    diff_eng = np.power((new_eng - old_eng), 2)
-    prob = np.exp(diff_eng) / temp
+    # diff_eng = np.power((new_eng - old_eng), 2)
+    # prob = np.exp(diff_eng / temp) 
+    # diff_eng = new_eng - old_eng
+    diff_eng = (old_eng - new_eng)
+    prob = np.exp(diff_eng)
+    # print ("diff_eng :", diff_eng)
+    # print ("temp :", temp)
     return prob
 
-def correlation(img1, img2, shift_row, shift_col):
+def correlation(img1, img2, rowInx, colInx):
     row, col = img1.shape
-    trans_matrix = np.float32([[1,0,shift_col],[0,1,shift_row]])
-    img2 = cv2.warpAffine(img2, trans_matrix, (col,row))
+    trans_matrix = np.float32([[1,0,colInx],[0,1,rowInx]])
+    imgShift = cv2.warpAffine(img2, trans_matrix, (col,row))
     # ! Quadrant 1
-    if shift_row > 0 and shift_col > 0:
-        img1 = img1[shift_row:row, shift_col:col]
-        img2 = img2[shift_row:row, shift_col:col]
+    if rowInx > 0 and colInx > 0:
+        imgRef = img1[rowInx:row, colInx:col]
+        imgShift = imgShift[rowInx:row, colInx:col]
     # ! Quadrant 2
-    elif shift_row > 0 and shift_col < 0:
-        img1 = img1[shift_row:row, 0:col+shift_col]
-        img2 = img2[shift_row:row, 0:col+shift_col]
+    elif rowInx > 0 and colInx < 0:
+        imgRef = img1[rowInx:row, 0:col+colInx]
+        imgShift = imgShift[rowInx:row, 0:col+colInx]
     # ! Quadrant 3
-    elif shift_row < 0 and shift_col < 0:
-        img1 = img1[0:row+shift_row, 0:col+shift_col]
-        img2 = img2[0:row+shift_row, 0:col+shift_col]
+    elif rowInx < 0 and colInx < 0:
+        imgRef = img1[0:row+rowInx, 0:col+colInx]
+        imgShift = imgShift[0:row+rowInx, 0:col+colInx]
     # ! Quadrant 4
-    elif shift_row < 0 and shift_col > 0:
-        img1 = img1[0:row+shift_row, shift_col:col]
-        img2 = img2[0:row+shift_row, shift_col:col]
+    elif rowInx < 0 and colInx > 0:
+        imgRef = img1[0:row+rowInx, colInx:col]
+        imgShift = imgShift[0:row+rowInx, colInx:col]
+    # ! Origin
+    elif colInx == 0 and rowInx == 0:
+        # print ("Origin")
+        imgRef = img1[0:row, 0:col]
+        imgShift = imgShift[0:row, 0:col]
+    # ! row axis
+    elif colInx == 0 and rowInx != 0:
+        # print ("row axis")
+        if rowInx > 0:
+            imgRef = img1[rowInx:row, 0:col]
+            imgShift = imgShift[rowInx:row, 0:col]
+        elif rowInx < 0:
+            imgRef = img1[0:row+rowInx, 0:col]
+            imgShift = imgShift[0:row+rowInx, 0:col]
+    # ! col axis
+    elif rowInx == 0 and colInx != 0:
+        # print ("col axis")
+        if colInx > 0:
+            imgRef = img1[0:row, colInx:col]
+            imgShift = imgShift[0:row, colInx:col]
+        elif colInx < 0:
+            imgRef = img1[0:row, 0:col+colInx]
+            imgShift = imgShift[0:row, 0:col+colInx]
 
-    coef = cv2.matchTemplate(img1, img2, cv2.TM_CCOEFF_NORMED)
-    print (coef[0][0])
+    coef = cv2.matchTemplate(imgRef, imgShift, cv2.TM_CCOEFF_NORMED)
+    print ("correlation :", coef[0][0])
 
 class sa_optimize:
-    def __init__(self, img1, img2, pose, cfar):
+    def __init__(self, img1, img2, ref_pose):
         self.row, self.col = img1.shape
-        # self.state_z = np.random.uniform(low = 1.0, high = 3.0, size = (self.row,self.col))
-        # self.state_z = 2 * np.ones((self.row,self.col), dtype = float) 
-        self.state_z = cfar
-        self.init_state = self.state_z
-        self.observe = 0
-        self.old_energyZ = 0
+        self.img1 = img1
+        self.img2 = img2
+
+        init_pose = [0, 0]
+        self.pose = init_pose
+        
+        self.old_energyZ = self.energy_init()
         self.new_energyZ = 0
         
         self.temp = 1.0
-        self.min_temp = 0.00001
+        self.min_temp = 0.001
         self.alpha = 0.9
-        self.loop_end = True
 
-        # for i in range(20):
-        #     self.update(pose)
-        while(self.loop_end):
-            self.update(pose)
+        self.count_increase = 0
+        self.count_decrease = 0
+        self.count_accepted = 0
 
-        if self.temp > self.min_temp:
-            print ("MORE")
-        else:
-            print ("LESS")
+        # print ("init_energy :", self.old_energyZ)
+        # print ("==========================")
+   
+        # plt.axis([-20, 20, -20, 20])
+        while(self.temp > self.min_temp):
+            self.update()
+            # plt.scatter(self.pose[0], self.pose[1])
+            # plt.pause(0.05)
+            # print ("----------------")
+        
 
-        # print (self.init_state.shape)
-        # print (self.state_z.shape)
-        # print (self.init_state.dtype)
-        # print (self.state_z.dtype)
+
+        # while(1):
+        #     commd = input("Continue? :")
+        #     if commd == "y":
+        #         self.update(pose)
+        #     else:
+        #         break
+        #     print ("==========================")
+
+        # if self.temp > self.min_temp:
+        #     print ("MORE")
+        # else:
+        #     print ("LESS")
+
+        # print ("Finish")
+        print ("Increase :", self.count_increase, "times")
+        print ("Accepted :", self.count_accepted, "times")
+        print ("Decrease :", self.count_decrease, "times")
+        print ("pose :", self.pose)
+        correlation(img1, img2, self.pose[0], self.pose[1])
+        print ("========")
+        # plt.show()
+
+        # print ("output_max :", np.max(self.state_z))
+        # print ("output_min :", np.min(self.state_z))
+
         # sonarPlotting.subplot2(self.init_state, self.state_z, ["1", "2"])
-        res1 = self.init_state.astype(np.uint8)
-        res2 = self.state_z.astype(np.uint8)
-        sonarPlotting.subplot4(self.init_state, self.state_z, res1, res2, ["1", "2", "3", "4"])
-        # correlation(self.init_state, self.state_z, 0, 0)
-        # coef = cv2.matchTemplate(self.init_state, self.state_z, cv2.TM_CCOEFF_NORMED)
-        # print (coef[0][0])
 
-    def obv_energy(self, img1, img2, pose):
-        rowShift = pose[0]
-        colShift = pose[1]
+    def energy_init(self):
+        rowShift = self.pose[0]
+        colShift = self.pose[1]
         trans = np.float32([[1,0,colShift],[0,1,rowShift]])
-        imgShift = cv2.warpAffine(img2, trans, (self.col,self.row))
-
-        img_ref, img_remap = shift_and_crop(img1, imgShift, rowShift, colShift)
-        eng = np.power((img_ref - img_remap), 2)
-        self.observe = np.sum(eng)
+        z_ref = self.img1
+        z_shift = cv2.warpAffine(self.img2, trans, (self.col,self.row))
+        z_ref, z_shift = shift_and_crop(z_ref, z_shift, rowShift, colShift)
         
-    def update(self, pose):
-        rand_move = np.random.uniform(low = -0.05, high = 0.05, size = (self.row,self.col))
-        self.next_state_z = self.state_z + rand_move
-
-        self.z_energy(pose)
-
-        if self.old_energyZ == 0:
-            print ("First Initial")
-            self.old_energyZ = self.new_energyZ
-            self.state_z = self.next_state_z
+        if True:
+            diff =  z_ref - z_shift
+            diff = np.power(diff, 2)
+            eng = np.sum(diff) / (z_ref.shape[0] * z_ref.shape[1])
         else:
-            # print (self.new_energyZ, self.old_energyZ)
-            if self.new_energyZ < self.old_energyZ:
-                print ("Decrease")
-                self.state_z = self.next_state_z
-                self.old_energyZ = self.new_energyZ
-            else:
-                print ("Increase")
-                if self.temp > self.min_temp:
-                    prob = accepted_prob(self.new_energyZ, self.old_energyZ, self.temp)
-                    if prob > random.random():
-                        self.state_z = self.next_state_z
-                        self.old_energyZ = self.new_energyZ
-                    else:
-                        self.loop_end = False
-                else:
-                    self.loop_end = False
+            coef = cv2.matchTemplate(z_ref, z_shift, cv2.TM_CCOEFF_NORMED)
+            eng = coef[0][0]
+        return eng
 
-                self.temp = self.temp * self.alpha
+    def update(self):
+        move_row = self.pose[0] + random.choice([-2,-1,0,1,2])
+        move_col = self.pose[1] + random.choice([-2,-1,0,1,2])
+        self.move = [move_row, move_col]
+        self.z_energy()
 
-    def z_energy(self, pose):
-        num = 100
-        z_new = 0
-        rowShift = pose[0]
-        colShift = pose[1]
-        trans = np.float32([[1,0,colShift],[0,1,rowShift]])
-        z_Shift = cv2.warpAffine(self.next_state_z, trans, (self.col,self.row))
-        z_ref, z_remap = shift_and_crop(self.state_z, z_Shift, rowShift, colShift)
         
-        row, col = z_ref.shape
-        ran_row = np.random.randint(1+5, row + 1-5, size=num)
-        ran_col = np.random.randint(1+5, col + 1-5, size=num)
-        for i in range(0,num):
-            row_pose = ran_row[i]
-            col_pose = ran_col[i]
-            sum_diff = 0
-            for m in range(row_pose-1, row_pose+2):
-                for n in range(col_pose-1, col_pose+2):
-                    if m == row_pose and n == col_pose:
-                       pass
-                    else:
-                        diff = z_remap[row_pose][col_pose] - z_ref[m][n]
-                        # diff = z_remap[row_pose][col_pose] - z_remap[m][n]
-                        diff = np.power(diff ,2)
-                        sum_diff = sum_diff + diff
-            z_new = z_new + sum_diff
-        self.new_energyZ = z_new
+        # print ("old_energy :", self.old_energyZ)
+        # print ("new_energy :", self.new_energyZ)
+        if self.new_energyZ < self.old_energyZ:
+            # print ("Decrease")
+            self.count_decrease += 1
+            self.pose = self.move
+            self.old_energyZ = self.new_energyZ
+        else:
+            # print ("Increase")
+            self.count_increase += 1
+            prob = accepted_prob(self.new_energyZ, self.old_energyZ, self.temp)
+            # print ("prob :", prob)
+            if prob > random.random():
+                self.count_accepted += 1
+                self.pose = self.move
+                self.old_energyZ = self.new_energyZ
+
+            self.temp = self.temp * self.alpha
+
+    def z_energy(self):
+        rowShift = self.move[0]
+        colShift = self.move[1]
+        trans = np.float32([[1,0,colShift],[0,1,rowShift]])
+        z_shift = cv2.warpAffine(self.img2, trans, (self.col,self.row))
+        z_ref, z_shift = shift_and_crop(self.img1, z_shift, rowShift, colShift)
+
+        if True:
+            diff =  z_ref - z_shift
+            diff = np.power(diff, 2)
+            eng = np.sum(diff) / (z_ref.shape[0] * z_ref.shape[1])
+        else:
+            coef = cv2.matchTemplate(z_ref, z_shift, cv2.TM_CCOEFF_NORMED)
+            eng = coef[0][0]
+        
+        self.new_energyZ = eng
 
 if __name__ == '__main__':
     start = 3
+    stop = 7
     img1 = read_multilook(start)
-    img2 = read_multilook(start + 10)
-    speed, pose = positioning(start + 15)
-    pose_Shift = position_shift(pose[start], pose[start + 10])
+    img2 = read_multilook(stop)
+    speed, pose = positioning(20)
+    pose_Shift = position_shift(pose[start], pose[stop])
 
-    # sa_optimize(img1, img2, pose_Shift)
+    print ("start simulated annealing...")
+    # for i in range(0,10):
+    #     print ("round :", i+1)
+    #     sa_optimize(img1, img2, pose_Shift)
 
-    img_cfar = cafar(img1)
-    img_cfar2 = cafar(img2)
-    img_cfar = img_cfar.astype(np.float64)
+    if False:
+        row, col = img1.shape
+        point_img1 = []
+        point_img2 = []
+        for i in range(0,4):
+            rand_row = random.randint(0,row)
+            rand_col = random.randint(0,col)
+            point_img1.append((rand_col+2,rand_row+19))
+            point_img2.append((rand_col,rand_row))
+        point_img1 = np.asarray(point_img1)
+        point_img2 = np.asarray(point_img2)
+        p = cv2.getPerspectiveTransform(point_img2.astype(np.float32), point_img1.astype(np.float32))
+     
 
-    cv2.imshow("img_cfar", img_cfar)
-    cv2.imshow("img_cfar2", img_cfar2)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        f_stitched = warp(img1, p, output_shape=(600,800))
 
-    img_cfar = (img_cfar/255.0) * 2
-    added = 1 * np.ones((img_cfar.shape), dtype = float) 
-    img_cfar = img_cfar + added
-    print (np.max(img_cfar))
-    print (np.min(img_cfar))
+        M, N = img2.shape[:2]
+        print (M,N)
 
-    sa_optimize(img1, img2, pose_Shift, img_cfar)
+        f_stitched[0:M, 0:N] = img2
+        f_stitched2 = warp(img1, p, output_shape=(600,800))
+        # plt.imshow(f_stitched); plt.axis('off')
+        # plt.show()
+        sonarPlotting.subplot2(f_stitched, f_stitched2, ["1", "2"])
+        # cv2.imshow("warp", f_stitched)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+
+        # xy = np.array([[ 157, 32],[ 211, 37],[ 222,107],[ 147,124]])
+        # xaya = np.array([[  6, 38],[ 56, 31],[ 82, 87],[ 22,118]])
+        # print (xy)
+        # print (xaya)
+        # P = cv2.getPerspectiveTransform(xy.astype(np.float32), xaya.astype(np.float32))
+        # print (P)
+
+    if True:
+        cf1 = cafar(img1)
+        cf2 = cafar(img2)
+
+        # row, col = img1.shape
+        # img1[0:row, 0:col] = cf1
+
+        cv2.imshow("cf1", img1)
+        cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        col_list  = []
+        inx = int(128/2)
+        for i in range(1,7):
+            crop = img1[0:500, i*inx:(i*inx)+1]
+            # col_list.append(crop)
+        # cf_list = cf1[0:500, 500:501]
+            plt.plot(crop)
+            plt.show()
