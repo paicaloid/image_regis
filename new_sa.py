@@ -405,6 +405,8 @@ if __name__ == '__main__':
         cf1 = cafar(img1)
         cf2 = cafar(img2)
 
+        blur = cv2.GaussianBlur(img1,(15,15),0)
+
         # row, col = img1.shape
         # img1[0:row, 0:col] = cf1
 
@@ -423,10 +425,12 @@ if __name__ == '__main__':
         #     plt.show()
 
         col_list = img1[0:500, 500:501]
+        blur_list = blur[0:500, 500:501]
         cf_list = cf1[0:500, 500:501]
 
         col_list = np.flip(col_list,0)
         cf_list = np.flip(cf_list,0)
+        blur_list = np.flip(blur_list,0)
         pose_cf = []
 
         # print (np.max(cf_list))
@@ -455,7 +459,7 @@ if __name__ == '__main__':
             else:
                 break
         # print (sha_list)
-
+        # print (len(sha_list))
         start_sha = sha_list[0] + stop_cf
         stop_sha = sha_list[len(sha_list)-1] + stop_cf
 
@@ -465,20 +469,21 @@ if __name__ == '__main__':
 
         # sonarPlotting.subplot2(out, out, ["1", "2"])
         pix_range = 30.0 / 660.0
-        print (start_cf, stop_cf, start_sha, stop_sha)
-        print (start_cf*pix_range, stop_cf*pix_range, stop_sha*pix_range)
+        # print (start_cf, stop_cf, start_sha, stop_sha)
+        # print (start_cf*pix_range, stop_cf*pix_range, stop_sha*pix_range)
 
-        auv = 2.2
+        auv = 2.0
 
         height = auv * (((stop_sha*pix_range) - (peak*pix_range))/(stop_sha*pix_range))
 
-        print (height)
+        # print (height)
 
         # plt.plot(res)
-        # plt.plot(col_list)
-        # plt.plot(cf_list)
+        plt.plot(col_list)
+        plt.plot(cf_list)
+        plt.plot(blur_list)
         # plt.plot(50 * np.ones(500))
         # plt.plot(shadow)
-        # plt.show()
+        plt.show()
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
