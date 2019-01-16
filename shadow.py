@@ -69,14 +69,17 @@ def get_peak(intensity, mask):
     for i in range(len(mask)):
         if mask[i] == 255:
             pose.append(i)
-    
-    end_pipe = pose[len(pose)-1]
-
-    for j in pose:
-        if intensity[j] == np.max(intensity):
-            peak = j
-            break
-    return peak, end_pipe
+    if len(pose) == 0:
+        return 0 , 0, 0
+    else:
+        start_pipe = pose[0]
+        end_pipe = pose[len(pose)-1]
+        peak = 0
+        for j in pose:
+            if intensity[j] == np.max(intensity):
+                peak = j
+                break
+        return peak, end_pipe, start_pipe
 
 def get_shadow_edge(intensity, start_shadow, row):
     shadow = intensity[start_shadow:row]
@@ -86,21 +89,26 @@ def get_shadow_edge(intensity, start_shadow, row):
             sha_list.append(k)
         else:
             break
-    print (len(sha_list))
-    edge_shadow = sha_list[len(sha_list)-1] + start_shadow
-    return edge_shadow
+    # print (len(sha_list))
+    if len(sha_list) == 0:
+        return 0
+    else:
+        edge_shadow = sha_list[len(sha_list)-1] + start_shadow
+        return edge_shadow
 
 def calculate_height(auv, peak, edge):
     ratio = 30.0 / 660.0
     height = auv * (((edge*ratio) - (peak*ratio))/(edge*ratio))
-    print (height)
+    # print (height)
 
-def draw_dot(map_img, peak, edge, inx_col):
+def draw_dot(map_img, peak, edge, inx_col, start_cf, stop_cf):
     # cv2.circle(map_img, (peak,inx_col), 3, (255,0,0), -1)
     # cv2.circle(map_img, (edge,inx_col), 3, (0,255,0), -1)
     map_img = cv2.flip(map_img, 0)
-    cv2.circle(map_img, (inx_col,peak), 3, (255,0,0), -1)
+    cv2.circle(map_img, (inx_col,peak), 11, (255,0,0), -1)
     cv2.circle(map_img, (inx_col,edge), 3, (0,255,0), -1)
+    cv2.circle(map_img, (inx_col,start_cf), 3, (0,0,255), -1)
+    cv2.circle(map_img, (inx_col,stop_cf), 3, (0,0,255), -1)
     map_img = cv2.flip(map_img, 0)
 
     return map_img
@@ -108,24 +116,33 @@ def draw_dot(map_img, peak, edge, inx_col):
 img1 = read_multilook(3)
 row, col = img1.shape
 cf1 = cafar(img1)
+img1 = cv2.GaussianBlur(img1,(15,15),0)
 
 map_img = read_image(3) 
+# for i in range(1,40):
+#     inx_col = 500 + (i*5)
+inx_col = 0
+while(1):
+    inx_col = inx_col + 10
+    if inx_col > col:
+        break
 
-inx_col = 500
+    intensity = img1[0:row, inx_col:inx_col+1]
+    intensity = np.flip(intensity,0)
+    mask_cf = cf1[0:row, inx_col:inx_col+1]
+    mask_cf = np.flip(mask_cf,0)
 
-intensity = img1[0:row, inx_col:inx_col+1]
-intensity = np.flip(intensity,0)
-mask_cf = cf1[0:row, inx_col:inx_col+1]
-mask_cf = np.flip(mask_cf,0)
-
-peak, start_shadow = get_peak(intensity, mask_cf)
-edge = get_shadow_edge(intensity, start_shadow, row)
-auv = 2.2
-calculate_height(auv, peak, edge)
-
-map_img = draw_dot(map_img, peak, edge, inx_col)
+    peak, start_shadow, start_pipe = get_peak(intensity, mask_cf)
+    edge = get_shadow_edge(intensity, start_shadow, row)
+    auv = 2.2
+    if peak != 0 and start_shadow != 0 and edge != 0:
+        calculate_height(auv, peak, edge)
+        map_img = draw_dot(map_img, peak, edge, inx_col, start_shadow, start_pipe)
+    # else:
+    #     print ("No pipeline")
 
 cv2.imshow("map", map_img)
+cv2.imshow("cf1", cf1)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
