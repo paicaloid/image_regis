@@ -99,13 +99,14 @@ def get_shadow_edge(intensity, start_shadow, row):
 def calculate_height(auv, peak, edge):
     ratio = 30.0 / 660.0
     height = auv * (((edge*ratio) - (peak*ratio))/(edge*ratio))
-    # print (height)
+
+    return height
 
 def draw_dot(map_img, peak, edge, inx_col, start_cf, stop_cf):
     # cv2.circle(map_img, (peak,inx_col), 3, (255,0,0), -1)
     # cv2.circle(map_img, (edge,inx_col), 3, (0,255,0), -1)
     map_img = cv2.flip(map_img, 0)
-    cv2.circle(map_img, (inx_col,peak), 11, (255,0,0), -1)
+    cv2.circle(map_img, (inx_col,peak), 3, (255,0,0), -1)
     cv2.circle(map_img, (inx_col,edge), 3, (0,255,0), -1)
     cv2.circle(map_img, (inx_col,start_cf), 3, (0,0,255), -1)
     cv2.circle(map_img, (inx_col,stop_cf), 3, (0,0,255), -1)
@@ -113,15 +114,37 @@ def draw_dot(map_img, peak, edge, inx_col, start_cf, stop_cf):
 
     return map_img
 
-img1 = read_multilook(3)
+class elv_map:
+    def __init__(self, height, position, row, col):
+        self.map = np.zeros((row, col),np.uint8)
+        self.ratio = 30.0 / 660.0
+        self.create_map(height, position)
+
+    def create_map(self, height, position):
+        for i in range(len(height)):
+            size = height[i] / self.ratio
+            size = int(size)
+            if size % 2 == 0:
+                size = size - 1
+            kernel = np.ones((size,size))
+            
+    # def add_height(self, size):
+
+
+
+img1 = read_multilook(2)
 row, col = img1.shape
 cf1 = cafar(img1)
-img1 = cv2.GaussianBlur(img1,(15,15),0)
+# img1 = cv2.GaussianBlur(img1,(15,15),0)
+# img1 = cv2.blur(img1,(15,15))
+img1 = cv2.medianBlur(img1,5)
 
 map_img = read_image(3) 
 # for i in range(1,40):
 #     inx_col = 500 + (i*5)
 inx_col = 0
+h_list = []
+position = []
 while(1):
     inx_col = inx_col + 10
     if inx_col > col:
@@ -135,14 +158,53 @@ while(1):
     peak, start_shadow, start_pipe = get_peak(intensity, mask_cf)
     edge = get_shadow_edge(intensity, start_shadow, row)
     auv = 2.2
+
     if peak != 0 and start_shadow != 0 and edge != 0:
-        calculate_height(auv, peak, edge)
+        height = calculate_height(auv, peak, edge)
+        # print (height)
+        h_list.append(height)
         map_img = draw_dot(map_img, peak, edge, inx_col, start_shadow, start_pipe)
+        ()
+        position.append((peak,inx_col))
     # else:
     #     print ("No pipeline")
 
-cv2.imshow("map", map_img)
-cv2.imshow("cf1", cf1)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+# print (h_list)
+ele_list = []
+pose = []
+print (np.average(h_list))
+print (np.mean(h_list))
+lower = np.mean(h_list) - 0.2
+upper = np.mean(h_list) + 0.2
+
+for i in range(len(h_list)):
+    if lower <= h_list[i] <= upper:
+        ele_list.append(h_list[i])
+        pose.append(position[i])
+
+# h_map = elv_map(ele_list, pose, row, col)
+
+gauss = cv2.getGaussianKernel(ksize = 11, sigma = 4)
+# gauss = (gauss/np.max(gauss))*0.5
+gauss = gauss.reshape(1,11)
+gauss = np.dot(gauss.T,gauss)
+# print (gauss)
+print ((gauss/np.max(gauss))*0.5)
+
+# print (ele_list)
+# ele_list.append(1.0)
+# ele_list = np.asarray(ele_list)
+# print (ele_list.dtype)
+# test1 = img_as_ubyte(ele_list)
+# print (test1)
+
+# test2 = ele_list / ele_list.max() 
+# test2 = 255 * test2
+# test2 = test2.astype(np.uint8)
+# print (test2)
+
+# cv2.imshow("map", map_img)
+# cv2.imshow("cf1", cf1)
+# cv2.waitKey(0)
+# cv2.destroyAllWindows()
 
