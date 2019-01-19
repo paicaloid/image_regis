@@ -99,7 +99,7 @@ def get_shadow_edge(intensity, start_shadow, row):
 def calculate_height(auv, peak, edge):
     ratio = 30.0 / 660.0
     height = auv * (((edge*ratio) - (peak*ratio))/(edge*ratio))
-
+    # print (height[0])
     return height
 
 def draw_dot(map_img, peak, edge, inx_col, start_cf, stop_cf):
@@ -109,7 +109,7 @@ def draw_dot(map_img, peak, edge, inx_col, start_cf, stop_cf):
     cv2.circle(map_img, (inx_col,peak), 3, (255,0,0), -1)
     cv2.circle(map_img, (inx_col,edge), 3, (0,255,0), -1)
     cv2.circle(map_img, (inx_col,start_cf), 3, (0,0,255), -1)
-    cv2.circle(map_img, (inx_col,stop_cf), 3, (0,0,255), -1)
+    # cv2.circle(map_img, (inx_col,stop_cf), 3, (0,0,255), -1)
     map_img = cv2.flip(map_img, 0)
 
     return map_img
@@ -161,11 +161,57 @@ def reduce_error_height(h_list, position):
             pose.append(position[i])
     return ele_list, pose
 
+def height_no_cfar(img, step, inx):
+    row, col = img.shape
+    img = cv2.medianBlur(img,5)
+    map_img = read_image(inx) 
+
+    inx_col = 0
+    h_list = []
+    position = []
+    auv = 2.2
+
+    while(1):
+        inx_col = inx_col + 10
+        if inx_col > col:
+            break
+        intensity = img1[0:row, inx_col:inx_col+1]
+        intensity = np.flip(intensity,0)
+        maxima = np.max(intensity)
+        minima = np.min(intensity)
+        
+        pose_max = np.argmax(intensity)
+        pose_min = np.argmin(intensity)
+
+        if 1.0 < (pose_min/pose_max) < 1.4:
+            if (maxima/minima) > 5.0:
+                # map_img = draw_dot(map_img, pose_max, pose_min, inx_col, 0, 0)
+                thres = intensity[pose_min] + 50
+                for i in range(0,len(intensity) - pose_min):
+                    if intensity[pose_min+i] > thres:
+                        height = calculate_height(auv, pose_max, pose_min+i)
+                        # print (height)
+                        h_list.append(height)
+                        position.append((pose_max, inx_col))
+                        map_img = draw_dot(map_img, pose_max, pose_min, inx_col, pose_min+i, 0)
+                        break
+    return h_list, position
+    # print (len(h_list))
+    # print (h_list)
+    # print (position)
+    # ele_list, pos = reduce_error_height(h_list, position)
+    # print (ele_list)
+    # cv2.imwrite("plotDot_" + str(inx) + ".jpg", map_img)
+    # cv2.imshow("map", map_img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
 class elv_map:
     def __init__(self, height, position, row, col):
         self.map = np.zeros((row, col),np.uint8)
         self.ratio = 30.0 / 660.0
-        self.create_map(height, position)
+        # self.create_map(height, position)
+        self.reduce_kernel(11, 0.5)
 
     def create_map(self, height, position):
         for i in range(len(height)):
@@ -174,13 +220,27 @@ class elv_map:
             if size % 2 == 0:
                 size = size - 1
             kernel = np.ones((size,size))
-            
+    
+    def reduce_kernel(self, size, height):
+        value = int((size-1) / 2)
+        h = height
+        h_min = h / 2.0
+        h_step = (h - h_min) / (value - 1)
+        h_list = []
+        for i in range(value):
+            h_list.append(h - (h_step * i))
+        print (h_list)
     # def add_height(self, size):
 
 
 if __name__ == '__main__':
-    img1 = read_multilook(2)
-    height, pose = height_with_cfar(img1, 5)
+    i = 3
+    img1 = read_multilook(i)
+    row, col = img1.shape
+    # height, pose = height_with_cfar(img1, 10)
+    # height, pose = height_no_cfar(img1, 10, i)
+
+    z_map = elv_map(0,0,row, col)
 
     if False:
         row, col = img1.shape
