@@ -211,15 +211,38 @@ class elv_map:
         self.map = np.zeros((row, col),np.uint8)
         self.ratio = 30.0 / 660.0
         # self.create_map(height, position)
-        self.reduce_kernel(11, 0.5)
+        # self.reduce_kernel(11, 0.5)
+        # self.test_create_map()
+        self.create_map(height, position)
+        self.map = np.flip(self.map, 0)
+        cv2.imshow("after", self.map)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     def create_map(self, height, position):
         for i in range(len(height)):
+            pose = position[i]
             size = height[i] / self.ratio
             size = int(size)
             if size % 2 == 0:
                 size = size - 1
-            kernel = np.ones((size,size))
+            kernel = self.reduce_kernel(size, height[i])
+            row, col = kernel.shape
+            half = int((size-1)/2)
+            # self.map[pose[0]-size:pose[0]+size+1+row, pose[1]-size:pose[1]+size+1+col] = kernel
+            self.map[pose[0]-half:pose[0]+half+1, pose[1]-half:pose[1]+half+1] = kernel
+
+    def test_create_map(self):
+        z = 0.5
+        size = 11
+        pose = (100,100)
+        kernel = self.reduce_kernel(size, z)
+        row, col = kernel.shape
+        cv2.imshow("after", self.map)
+        self.map[100:100+row, 100:100+col] = kernel
+        cv2.imshow("after", self.map)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     
     def reduce_kernel(self, size, height):
         value = int((size-1) / 2)
@@ -229,18 +252,37 @@ class elv_map:
         h_list = []
         for i in range(value):
             h_list.append(h - (h_step * i))
+        h_list = np.flip(h_list, 0)
         print (h_list)
+        base = np.zeros((size,size))
+        for i in range(value):
+            temp = size - (2 * i)
+            a = np.ones((temp,temp)) * h_list[i]
+            b = np.zeros((temp-2,temp-2))
+            ref = np.zeros((size,size))
+            row, col = b.shape
+            a[1:row+1, 1:col+1] = b
+            row, col = a.shape
+            ref[i:row+i, i:col+i] = a
+            base = base + ref
+        row, col = base.shape
+        base[int((row-1)/2)][int((col-1)/2)] = height
+        base = img_as_ubyte(base)
+        # print (base)
+        return base
+
     # def add_height(self, size):
 
 
 if __name__ == '__main__':
-    i = 3
-    img1 = read_multilook(i)
-    row, col = img1.shape
-    # height, pose = height_with_cfar(img1, 10)
-    # height, pose = height_no_cfar(img1, 10, i)
+    # i = 5
+    for i in range(3,10):
+        img1 = read_multilook(i)
+        row, col = img1.shape
+        # height, pose = height_with_cfar(img1, 10)
+        height, pose = height_no_cfar(img1, 10, i)
 
-    z_map = elv_map(0,0,row, col)
+        z_map = elv_map(height,pose,row, col)
 
     if False:
         row, col = img1.shape
