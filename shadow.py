@@ -176,16 +176,17 @@ def height_no_cfar(img, step, inx):
         inx_col = inx_col + step
         if inx_col > col:
             break
-        intensity = img1[0:row, inx_col:inx_col+1]
+        intensity = img[0:row, inx_col:inx_col+1]
         intensity = np.flip(intensity,0)
         maxima = np.max(intensity)
         minima = np.min(intensity)
         
         pose_max = np.argmax(intensity)
         pose_min = np.argmin(intensity)
-
+        # map_img = draw_dot(map_img, pose_max, pose_min, inx_col, pose_min, 0)
         if 1.0 < (pose_min/pose_max) < 1.4:
             if (maxima/minima) > 5.0:
+            # if 5.0 < (maxima/minima) < 9.0:
                 # map_img = draw_dot(map_img, pose_max, pose_min, inx_col, 0, 0)
                 thres = intensity[pose_min] + 50
                 for i in range(0,len(intensity) - pose_min):
@@ -196,6 +197,9 @@ def height_no_cfar(img, step, inx):
                         position.append((pose_max, inx_col))
                         map_img = draw_dot(map_img, pose_max, pose_min, inx_col, pose_min+i, 0)
                         break
+    # cv2.imshow("map", map_img)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     return h_list, position
 
 def shift_and_crop(img1, img2, rowInx, colInx):
@@ -308,19 +312,17 @@ class elv_map:
 
 
 if __name__ == '__main__':
-    # i = 5
-    # img1 = read_multilook(4)
-    # row, col = img1.shape
-    # height, pose = height_no_cfar(img1, 5, 3)
-    # z_map1 = elv_map(height,pose,row, col)
 
-    # cv2.imshow("zMap1", z_map1.map)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+    img = read_multilook(3)
+    row, col = img.shape
+    height, position = height_no_cfar(img, 5, 3)
+    z_map = elv_map(height, position, row, col)
+    z_img = cv2.medianBlur(z_map.map,5)
 
-    # img1 = read_multilook(3)
-    # img2 = read_multilook(7)
-    # img = coef.coefShift(img1, img2, 30)
+    cv2.imshow("z_map", z_img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
     if False:
         for i in range(3,20):
             img1 = read_multilook(i)
@@ -330,8 +332,7 @@ if __name__ == '__main__':
 
             z_map = elv_map(height,pose,row, col)
             cv2.imwrite("zMap_" + str(i) + ".jpg", z_map.map)
-
-    if True:
+    if False:
         z_map1 = cv2.imread("D:\Pai_work\zMap3.png", 0)
         z_map2 = cv2.imread("D:\Pai_work\zMap4.png", 0)
 
@@ -347,7 +348,6 @@ if __name__ == '__main__':
         # err = np.power((ref1 - ref2), 2)
         # err = np.sum(err)
         # print (err/num_pix)
-
     if False:
         row, col = img1.shape
         cf1 = cafar(img1)
