@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from skimage.transform import warp
 from skimage import img_as_ubyte
 import sonarPlotting
+import coef_shifting as coef
 
 def cafar(img_gray):
     box_size = 59
@@ -172,7 +173,7 @@ def height_no_cfar(img, step, inx):
     auv = 2.2
 
     while(1):
-        inx_col = inx_col + 10
+        inx_col = inx_col + step
         if inx_col > col:
             break
         intensity = img1[0:row, inx_col:inx_col+1]
@@ -196,15 +197,47 @@ def height_no_cfar(img, step, inx):
                         map_img = draw_dot(map_img, pose_max, pose_min, inx_col, pose_min+i, 0)
                         break
     return h_list, position
-    # print (len(h_list))
-    # print (h_list)
-    # print (position)
-    # ele_list, pos = reduce_error_height(h_list, position)
-    # print (ele_list)
-    # cv2.imwrite("plotDot_" + str(inx) + ".jpg", map_img)
-    # cv2.imshow("map", map_img)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
+
+def shift_and_crop(img1, img2, rowInx, colInx):
+    row, col = img1.shape
+    # ! Quadrant 1
+    if rowInx > 0 and colInx > 0:
+        imgRef = img1[rowInx:row, colInx:col]
+        imgShift = img2[rowInx:row, colInx:col]
+    # ! Quadrant 2
+    elif rowInx > 0 and colInx < 0:
+        imgRef = img1[rowInx:row, 0:col+colInx]
+        imgShift = img2[rowInx:row, 0:col+colInx]
+    # ! Quadrant 3
+    elif rowInx < 0 and colInx < 0:
+        imgRef = img1[0:row+rowInx, 0:col+colInx]
+        imgShift = img2[0:row+rowInx, 0:col+colInx]
+    # ! Quadrant 4
+    elif rowInx < 0 and colInx > 0:
+        imgRef = img1[0:row+rowInx, colInx:col]
+        imgShift = img2[0:row+rowInx, colInx:col]
+    # ! Origin
+    elif colInx == 0 and rowInx == 0:
+        imgRef = img1[0:row, 0:col]
+        imgShift = img2[0:row, 0:col]
+    # ! row axis
+    elif colInx == 0 and rowInx != 0:
+        if rowInx > 0:
+            imgRef = img1[rowInx:row, 0:col]
+            imgShift = img2[rowInx:row, 0:col]
+        elif rowInx < 0:
+            imgRef = img1[0:row+rowInx, 0:col]
+            imgShift = img2[0:row+rowInx, 0:col]
+    # ! col axis
+    elif rowInx == 0 and colInx != 0:
+        if colInx > 0:
+            imgRef = img1[0:row, colInx:col]
+            imgShift = img2[0:row, colInx:col]
+        elif colInx < 0:
+            imgRef = img1[0:row, 0:col+colInx]
+            imgShift = img2[0:row, 0:col+colInx]
+    
+    return imgRef, imgShift
 
 class elv_map:
     def __init__(self, height, position, row, col):
@@ -215,9 +248,9 @@ class elv_map:
         # self.test_create_map()
         self.create_map(height, position)
         self.map = np.flip(self.map, 0)
-        cv2.imshow("after", self.map)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.imshow("after", self.map)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
 
     def create_map(self, height, position):
         for i in range(len(height)):
@@ -253,7 +286,7 @@ class elv_map:
         for i in range(value):
             h_list.append(h - (h_step * i))
         h_list = np.flip(h_list, 0)
-        print (h_list)
+        # print (h_list)
         base = np.zeros((size,size))
         for i in range(value):
             temp = size - (2 * i)
@@ -276,13 +309,44 @@ class elv_map:
 
 if __name__ == '__main__':
     # i = 5
-    for i in range(3,10):
-        img1 = read_multilook(i)
-        row, col = img1.shape
-        # height, pose = height_with_cfar(img1, 10)
-        height, pose = height_no_cfar(img1, 10, i)
+    # img1 = read_multilook(4)
+    # row, col = img1.shape
+    # height, pose = height_no_cfar(img1, 5, 3)
+    # z_map1 = elv_map(height,pose,row, col)
 
-        z_map = elv_map(height,pose,row, col)
+    # cv2.imshow("zMap1", z_map1.map)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
+
+    # img1 = read_multilook(3)
+    # img2 = read_multilook(7)
+    # img = coef.coefShift(img1, img2, 30)
+    if False:
+        for i in range(3,20):
+            img1 = read_multilook(i)
+            row, col = img1.shape
+            # height, pose = height_with_cfar(img1, 10)
+            height, pose = height_no_cfar(img1, 5, i)
+
+            z_map = elv_map(height,pose,row, col)
+            cv2.imwrite("zMap_" + str(i) + ".jpg", z_map.map)
+
+    if True:
+        z_map1 = cv2.imread("D:\Pai_work\zMap3.png", 0)
+        z_map2 = cv2.imread("D:\Pai_work\zMap4.png", 0)
+
+        row, col = z_map1.shape
+        num_pix = row * col
+        err = np.power((z_map1 - z_map2), 2)
+        err = np.sum(err)
+        print (err/num_pix)
+
+        # ref1, ref2 = shift_and_crop(z_map1, z_map2, -21, 0)
+        # row, col = ref1.shape
+        # num_pix = row * col
+        # err = np.power((ref1 - ref2), 2)
+        # err = np.sum(err)
+        # print (err/num_pix)
 
     if False:
         row, col = img1.shape
