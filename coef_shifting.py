@@ -34,6 +34,26 @@ def coefShift(img1, img2, num):
             elif rowInx < 0 and colInx > 0:
                 imgRef = img1[0:500+rowInx, colInx:768]
                 imgShift = imgShift[0:500+rowInx, colInx:768]
+            # ! Origin
+            elif colInx == 0 and rowInx == 0:
+                imgRef = img1[0:row, 0:col]
+                imgShift = imgShift[0:row, 0:col]
+            # ! row axis
+            elif colInx == 0 and rowInx != 0:
+                if rowInx > 0:
+                    imgRef = img1[rowInx:row, 0:col]
+                    imgShift = imgShift[rowInx:row, 0:col]
+                elif rowInx < 0:
+                    imgRef = img1[0:row+rowInx, 0:col]
+                    imgShift = imgShift[0:row+rowInx, 0:col]
+            # ! col axis
+            elif rowInx == 0 and colInx != 0:
+                if colInx > 0:
+                    imgRef = img1[0:row, colInx:col]
+                    imgShift = imgShift[0:row, colInx:col]
+                elif colInx < 0:
+                    imgRef = img1[0:row, 0:col+colInx]
+                    imgShift = imgShift[0:row, 0:col+colInx]
             
             coef = cv2.matchTemplate(imgRef, imgShift, cv2.TM_CCOEFF_NORMED)
             colList.append(coef[0][0])
