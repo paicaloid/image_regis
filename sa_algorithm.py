@@ -390,38 +390,38 @@ class sa_optimize:
             z_new = z_new + sum_diff
         self.new_energyZ = z_new/num
 
-if __name__ == '__main__':
-    start = 3
-    stop = 5
-    img1 = read_multilook(start)
-    img2 = read_multilook(stop)
-    speed, pose = positioning(20)
-    pose_Shift = position_shift(pose[start], pose[stop])
+# if __name__ == '__main__':
+#     start = 3
+#     stop = 5
+#     img1 = read_multilook(start)
+#     img2 = read_multilook(stop)
+#     speed, pose = positioning(20)
+#     pose_Shift = position_shift(pose[start], pose[stop])
 
-    img_cfar = cafar(img1)
-    blur = cv2.GaussianBlur(img_cfar,(21,21),5)
+#     img_cfar = cafar(img1)
+#     blur = cv2.GaussianBlur(img_cfar,(21,21),5)
 
-    blur = (blur/255.0) * 0.5
-    added = 1 * np.ones((img_cfar.shape), dtype = float) 
+#     blur = (blur/255.0) * 0.5
+#     added = 1 * np.ones((img_cfar.shape), dtype = float) 
 
-    cvt_img = blur / np.max(blur) # normalize the data to 0 - 1
-    cvt_img = cvt_img * 0.5
-    print ("init_max :", np.max(cvt_img))
-    print ("init_min :", np.min(cvt_img))
+#     cvt_img = blur / np.max(blur) # normalize the data to 0 - 1
+#     cvt_img = cvt_img * 0.5
+#     print ("init_max :", np.max(cvt_img))
+#     print ("init_min :", np.min(cvt_img))
     
-    img_cfar2 = cafar(img2)
-    blur2 = cv2.GaussianBlur(img_cfar2,(21,21),5)
+#     img_cfar2 = cafar(img2)
+#     blur2 = cv2.GaussianBlur(img_cfar2,(21,21),5)
 
-    blur2 = (blur2/255.0) * 0.5
+#     blur2 = (blur2/255.0) * 0.5
 
-    cvt_img2 = blur2 / np.max(blur2) # normalize the data to 0 - 1
-    cvt_img2 = cvt_img2 * 0.5
+#     cvt_img2 = blur2 / np.max(blur2) # normalize the data to 0 - 1
+#     cvt_img2 = cvt_img2 * 0.5
 
-    cv2.imshow("cvt_img2", cvt_img2)
-    cv2.imshow("cvt_img", cvt_img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+#     cv2.imshow("cvt_img2", cvt_img2)
+#     cv2.imshow("cvt_img", cvt_img)
+#     cv2.waitKey(0)
+#     cv2.destroyAllWindows()
 
 
-    print ("start simulated annealing...")
-    sa_optimize(img1, img2, pose_Shift, cvt_img, cvt_img2)
+#     print ("start simulated annealing...")
+#     sa_optimize(img1, img2, pose_Shift, cvt_img, cvt_img2)
